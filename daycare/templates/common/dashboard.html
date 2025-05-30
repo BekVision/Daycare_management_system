@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Daycare</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .activity-item {
+            border-left: 4px solid #667eea;
+            background: white;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 0.5rem;
+        }
+        .health-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .health-healthy { background-color: #28a745; }
+        .health-warning { background-color: #ffc107; }
+        .health-error { background-color: #dc3545; }
+        .health-down { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                <i class="fas fa-baby me-2"></i>Daycare Admin
+            </a>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>{{ user.get_full_name }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'signout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Chiqish
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-3x mb-3"></i>
+                        <h3>{{ total_users }}</h3>
+                        <p class="mb-0">Jami foydalanuvchilar</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-3x mb-3"></i>
+                        <h3>{{ active_sessions }}</h3>
+                        <p class="mb-0">Faol sessiyalar</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-3x mb-3 text-success"></i>
+                        <h3>98%</h3>
+                        <p class="mb-0">Tizim ishlashi</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-bell fa-3x mb-3 text-warning"></i>
+                        <h3>3</h3>
+                        <p class="mb-0">Bildirishnomalar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Recent Activities -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-history me-2"></i>So'nggi faoliyatlar
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for activity in recent_activities %}
+                            <div class="activity-item p-3">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">{{ activity.get_action_display }}</h6>
+                                        <small class="text-muted">{{ activity.user.get_full_name }}</small>
+                                    </div>
+                                    <small class="text-muted">{{ activity.timestamp|timesince }} oldin</small>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted text-center">Faoliyat mavjud emas</p>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'common:activity_log_list' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-1"></i>Barchasini ko'rish
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-heartbeat me-2"></i>Tizim salomatligi
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for health in system_status %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>
+                                    <span class="health-indicator health-{{ health.status|lower }}"></span>
+                                    {{ health.get_component_display }}
+                                </span>
+                                <small class="text-muted">{{ health.checked_at|timesince }} oldin</small>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted text-center">Ma'lumot mavjud emas</p>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'common:system_health_dashboard' %}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-chart-bar me-1"></i>Batafsil
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-bolt me-2"></i>Tezkor harakatlar
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'common:settings_list' %}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-cogs me-2"></i>Sozlamalar
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'common:activity_log_list' %}" class="btn btn-outline-info w-100">
+                                    <i class="fas fa-list me-2"></i>Faoliyat logi
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'common:system_health_dashboard' %}" class="btn btn-outline-success w-100">
+                                    <i class="fas fa-heartbeat me-2"></i>Tizim salomatligi
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'admin:index' %}" class="btn btn-outline-warning w-100">
+                                    <i class="fas fa-tools me-2"></i>Admin panel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

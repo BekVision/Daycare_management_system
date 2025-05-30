@@ -1,0 +1,33 @@
+asgiref==3.8.1
+Django==5.2.1
+sqlparse==0.5.3
+Django==5.0.6
+Pillow==10.3.0
+python-decouple==3.8
+django-extensions==3.2.3
+
+# Development tools
+django-debug-toolbar==4.1.0
+
+# Database
+psycopg2-binary==2.9.7  # PostgreSQL adapter (optional)
+
+# API development (for future use)
+djangorestframework==3.14.0
+django-cors-headers==4.2.0
+
+# Task queue (for future use)
+celery==5.3.1
+redis==4.6.0
+
+# Excel/CSV processing (for reports)
+openpyxl==3.1.2
+pandas==2.0.3
+
+# Testing
+coverage==7.2.7
+factory-boy==3.3.0
+
+# Production
+gunicorn==21.2.0
+whitenoise==6.5.0

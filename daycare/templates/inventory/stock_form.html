@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3">{{ title }}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_list' %}">Zaxiralar</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-stack"></i>
+                        Zaxira Ma'lumotlarini Yangilash
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Stock Info -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="alert-heading">{{ stock.ingredient.name }}</h6>
+                                <p class="mb-1">Kategoriya: {{ stock.ingredient.category.name }}</p>
+                                <p class="mb-0">O'lchov birligi: {{ stock.ingredient.unit }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <div class="h4 mb-0">{{ stock.current_quantity|floatformat:1 }}</div>
+                                    <small class="text-muted">Hozirgi zaxira</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Hidden ingredient field -->
+                        {{ form.ingredient.as_hidden }}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.current_quantity.id_for_label }}" class="form-label">
+                                        {{ form.current_quantity.label }}
+                                    </label>
+                                    {{ form.current_quantity }}
+                                    {% if form.current_quantity.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.current_quantity.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Joriy zaxira miqdori</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.reserved_quantity.id_for_label }}" class="form-label">
+                                        {{ form.reserved_quantity.label }}
+                                    </label>
+                                    {{ form.reserved_quantity }}
+                                    {% if form.reserved_quantity.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.reserved_quantity.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Zaxirada saqlanadigan miqdor</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.last_restock_date.id_for_label }}" class="form-label">
+                                        {{ form.last_restock_date.label }}
+                                    </label>
+                                    {{ form.last_restock_date }}
+                                    {% if form.last_restock_date.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.last_restock_date.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                                        {{ form.expiry_date.label }}
+                                    </label>
+                                    {{ form.expiry_date }}
+                                    {% if form.expiry_date.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.expiry_date.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stock Level Visualization -->
+                        <div class="mb-4">
+                            <label class="form-label">Zaxira darajasi ko'rinishi</label>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <small class="text-muted">Minimal: {{ stock.ingredient.min_threshold }} {{ stock.ingredient.unit }}</small>
+                                        {% if stock.ingredient.max_threshold %}
+                                        <small class="text-muted">Maksimal: {{ stock.ingredient.max_threshold }} {{ stock.ingredient.unit }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        {% if stock.ingredient.max_threshold %}
+                                            {% widthratio stock.current_quantity stock.ingredient.max_threshold 100 as progress_width %}
+                                        {% else %}
+                                            {% widthratio stock.current_quantity stock.ingredient.min_threshold|add:stock.ingredient.min_threshold 100 as progress_width %}
+                                        {% endif %}
+                                        <div class="progress-bar
+                                            {% if stock.current_quantity <= stock.ingredient.min_threshold %}bg-danger
+                                            {% elif stock.current_quantity <= stock.ingredient.min_threshold|add:stock.ingredient.min_threshold %}bg-warning
+                                            {% else %}bg-success{% endif %}"
+                                             role="progressbar"
+                                             style="width: {{ progress_width }}%">
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        {% if stock.current_quantity <= 0 %}
+                                            <span class="badge bg-danger">Tugagan</span>
+                                        {% elif stock.current_quantity <= stock.ingredient.min_threshold %}
+                                            <span class="badge bg-warning">Kam zaxira</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Yaxshi holat</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:stock_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Orqaga
+                            </a>
+                            <div>
+                                <a href="{% url 'inventory:stock_adjustment' stock.ingredient.pk %}" class="btn btn-outline-warning me-2">
+                                    <i class="bi bi-sliders"></i> Miqdorni Sozlash
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Yangilash
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const currentQuantityInput = document.getElementById('{{ form.current_quantity.id_for_label }}');
+    const reservedQuantityInput = document.getElementById('{{ form.reserved_quantity.id_for_label }}');
+    const minThreshold = {{ stock.ingredient.min_threshold }};
+    const maxThreshold = {{ stock.ingredient.max_threshold|default:0 }};
+
+    function updateStockStatus() {
+        const currentQuantity = parseFloat(currentQuantityInput.value) || 0;
+        const progressBar = document.querySelector('.progress-bar');
+        const statusBadge = document.querySelector('.badge');
+
+        let progressWidth = 0;
+        let statusClass = '';
+        let statusText = '';
+
+        if (maxThreshold > 0) {
+            progressWidth = Math.min((currentQuantity / maxThreshold) * 100, 100);
+        } else {
+            progressWidth = Math.min((currentQuantity / (minThreshold * 2)) * 100, 100);
+        }
+
+        if (currentQuantity <= 0) {
+            statusClass = 'bg-danger';
+            statusText = 'Tugagan';
+        } else if (currentQuantity <= minThreshold) {
+            statusClass = 'bg-warning';
+            statusText = 'Kam zaxira';
+        } else {
+            statusClass = 'bg-success';
+            statusText = 'Yaxshi holat';
+        }
+
+        progressBar.style.width = progressWidth + '%';
+        progressBar.className = 'progress-bar ' + statusClass;
+        statusBadge.className = 'badge ' + statusClass.replace('bg-', 'bg-');
+        statusBadge.textContent = statusText;
+    }
+
+    // Update status on input change
+    currentQuantityInput.addEventListener('input', updateStockStatus);
+
+    // Validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const currentQuantity = parseFloat(currentQuantityInput.value) || 0;
+        const reservedQuantity = parseFloat(reservedQuantityInput.value) || 0;
+
+        if (currentQuantity < 0) {
+            e.preventDefault();
+            alert('Joriy miqdor noldan kichik bo\'lishi mumkin emas');
+            currentQuantityInput.focus();
+        } else if (reservedQuantity < 0) {
+            e.preventDefault();
+            alert('Zaxira miqdor noldan kichik bo\'lishi mumkin emas');
+            reservedQuantityInput.focus();
+        }
+    });
+});
+</script>
+{% endblock %}

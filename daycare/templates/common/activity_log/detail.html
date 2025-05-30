@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faoliyat tafsilotlari - Daycare</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        .info-card:hover {
+            transform: translateY(-2px);
+        }
+        .json-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .action-badge {
+            font-size: 1rem;
+            padding: 8px 16px;
+        }
+        .timeline-item {
+            border-left: 3px solid #667eea;
+            padding-left: 20px;
+            position: relative;
+        }
+        .timeline-item::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border-radius: 50%;
+            position: absolute;
+            left: -7px;
+            top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'common:dashboard' %}">
+                <i class="fas fa-baby me-2"></i>Daycare Admin
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="{% url 'common:activity_log_list' %}" class="btn btn-light btn-sm me-3">
+                    <i class="fas fa-arrow-left me-1"></i>Orqaga
+                </a>
+                <span class="navbar-text">Faoliyat tafsilotlari</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="row">
+            <!-- Main Info Card -->
+            <div class="col-lg-8">
+                <div class="info-card card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Faoliyat ma'lumotlari
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="timeline-item mb-4">
+                                    <h6 class="text-muted mb-1">Foydalanuvchi</h6>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user me-2 text-primary"></i>
+                                        <div>
+                                            <strong>{{ log.user.get_full_name }}</strong>
+                                            <br><small class="text-muted">@{{ log.user.username }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="timeline-item mb-4">
+                                    <h6 class="text-muted mb-1">Harakat</h6>
+                                    <span class="badge action-badge bg-{% if 'LOGIN' in log.action %}success{% elif 'DELETE' in log.action %}danger{% elif 'UPDATE' in log.action %}warning{% elif 'CREATE' in log.action %}primary{% else %}info{% endif %}">
+                                        <i class="fas fa-{% if 'LOGIN' in log.action %}sign-in-alt{% elif 'DELETE' in log.action %}trash{% elif 'UPDATE' in log.action %}edit{% elif 'CREATE' in log.action %}plus{% else %}cog{% endif %} me-1"></i>
+                                        {{ log.get_action_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="timeline-item mb-4">
+                                    <h6 class="text-muted mb-1">Vaqt</h6>
+                                    <div>
+                                        <i class="fas fa-clock me-2 text-warning"></i>
+                                        <strong>{{ log.timestamp|date:"d.m.Y H:i:s" }}</strong>
+                                        <br><small class="text-muted">{{ log.timestamp|timesince }} oldin</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="timeline-item mb-4">
+                                    <h6 class="text-muted mb-1">Obyekt turi</h6>
+                                    <div>
+                                        <i class="fas fa-cube me-2 text-info"></i>
+                                        <strong>{{ log.object_type|default:"Noma'lum" }}</strong>
+                                        {% if log.object_id %}
+                                            <br><small class="text-muted">ID: {{ log.object_id }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if log.object_repr %}
+                            <div class="timeline-item mb-4">
+                                <h6 class="text-muted mb-1">Obyekt tavsifi</h6>
+                                <div class="alert alert-light">
+                                    <i class="fas fa-tag me-2"></i>
+                                    {{ log.object_repr }}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Changes Details -->
+                {% if log.changes %}
+                    <div class="info-card card mt-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exchange-alt me-2"></i>O'zgarishlar
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="json-display">
+                                <pre id="changesJson"></pre>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Technical Info -->
+                <div class="info-card card">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-server me-2"></i>Texnik ma'lumotlar
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">IP manzil</h6>
+                            {% if log.ip_address %}
+                                <code class="bg-light p-2 rounded d-block">{{ log.ip_address }}</code>
+                            {% else %}
+                                <small class="text-muted">Ma'lumot yo'q</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">User Agent</h6>
+                            {% if log.user_agent %}
+                                <div class="bg-light p-2 rounded" style="font-size: 0.8rem; word-break: break-all;">
+                                    {{ log.user_agent|truncatechars:100 }}
+                                </div>
+                            {% else %}
+                                <small class="text-muted">Ma'lumot yo'q</small>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <h6 class="text-muted mb-1">Session ID</h6>
+                            <small class="text-muted">{{ request.session.session_key|default:"Noma'lum" }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="info-card card mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-bolt me-2"></i>Tezkor harakatlar
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'common:activity_log_list' %}?user={{ log.user.id }}"
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-user me-1"></i>Bu foydalanuvchi faoliyati
+                            </a>
+
+                            <a href="{% url 'common:activity_log_list' %}?action={{ log.action }}"
+                               class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-filter me-1"></i>Shu turdagi harakatlar
+                            </a>
+
+                            {% if log.object_type %}
+                                <a href="{% url 'common:activity_log_list' %}?object_type={{ log.object_type }}"
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-cube me-1"></i>Shu obyekt turi
+                                </a>
+                            {% endif %}
+
+                            <a href="{% url 'common:activity_log_list' %}?date_from={{ log.timestamp|date:'Y-m-d' }}&date_to={{ log.timestamp|date:'Y-m-d' }}"
+                               class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-calendar me-1"></i>Shu kun faoliyati
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Activities -->
+                {% if related_activities %}
+                    <div class="info-card card mt-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-link me-2"></i>Bog'liq faoliyatlar
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% for activity in related_activities %}
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                                    <div>
+                                        <small class="text-muted">{{ activity.get_action_display }}</small>
+                                        <br><small>{{ activity.timestamp|timesince }} oldin</small>
+                                    </div>
+                                    <a href="{% url 'common:activity_log_detail' activity.pk %}"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Back to List Button -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="{% url 'common:activity_log_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-list me-2"></i>Faoliyat log ro'yxatiga qaytish
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Format and display JSON changes
+        {% if log.changes %}
+            const changesData = {{ log.changes|safe }};
+            const formattedJson = JSON.stringify(changesData, null, 2);
+            document.getElementById('changesJson').textContent = formattedJson;
+        {% endif %}
+
+        // Copy functions
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-check me-2"></i>Nusxalandi!
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 3000);
+            });
+        }
+
+        // Add click to copy functionality for code blocks
+        document.querySelectorAll('code').forEach(code => {
+            code.style.cursor = 'pointer';
+            code.title = 'Nusxalash uchun bosing';
+            code.addEventListener('click', () => {
+                copyToClipboard(code.textContent);
+            });
+        });
+    </script>
+</body>
+</html>

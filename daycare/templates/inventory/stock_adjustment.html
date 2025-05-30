@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3">{{ title }}</h1>
+            <p class="text-muted">{{ ingredient.name }} uchun zaxira miqdorini sozlash</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        Diqqat: Zaxira miqdorini o'zgartirish
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Current Stock Info -->
+                    <div class="alert alert-info">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ stock.current_quantity|floatformat:1 }}</div>
+                                <small>Hozirgi miqdor</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ ingredient.min_threshold|floatformat:1 }}</div>
+                                <small>Minimal chegara</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ ingredient.unit }}</div>
+                                <small>O'lchov birligi</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.quantity.id_for_label }}" class="form-label">{{ form.quantity.label }}</label>
+                            {{ form.quantity }}
+                            {% if form.quantity.errors %}
+                                <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Yangi zaxira miqdorini kiriting</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.adjustment_reason.id_for_label }}" class="form-label">{{ form.adjustment_reason.label }}</label>
+                            {{ form.adjustment_reason }}
+                            {% if form.adjustment_reason.errors %}
+                                <div class="invalid-feedback d-block">{{ form.adjustment_reason.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:stock_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Orqaga
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-gear"></i> Zaxirani O'zgartirish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('{{ form.quantity.id_for_label }}');
+    const currentQuantity = {{ stock.current_quantity }};
+    
+    // Real-time difference calculation
+    quantityInput.addEventListener('input', function() {
+        const newQuantity = parseFloat(this.value) || 0;
+        const difference = newQuantity - currentQuantity;
+        
+        // Show difference indicator
+        const diffElement = document.getElementById('quantity-difference');
+        if (!diffElement) {
+            const diffDiv = document.createElement('div');
+            diffDiv.id = 'quantity-difference';
+            diffDiv.className = 'form-text';
+            this.parentNode.appendChild(diffDiv);
+        }
+        
+        const diffEl = document.getElementById('quantity-difference');
+        if (difference > 0) {
+            diffEl.innerHTML = `<span class="text-success">+${difference.toFixed(1)} {{ ingredient.unit }} (ko'payish)</span>`;
+        } else if (difference < 0) {
+            diffEl.innerHTML = `<span class="text-danger">${difference.toFixed(1)} {{ ingredient.unit }} (kamayish)</span>`;
+        } else {
+            diffEl.innerHTML = '<span class="text-muted">O\'zgarish yo\'q</span>';
+        }
+    });
+});
+</script>
+{% endblock %}

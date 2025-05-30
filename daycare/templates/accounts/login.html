@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Kirish - Bog'cha Ombor Tizimi{% endblock %}
+
+{% block auth_content %}
+<div class="min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="mb-3">
+                                <i class="bi bi-house-gear" style="font-size: 3rem; color: #667eea;"></i>
+                            </div>
+                            <h3 class="fw-bold text-dark">Bog'cha Tizimi</h3>
+                            <p class="text-muted">Ombor va Ovqat Boshqaruvi</p>
+                        </div>
+                        
+                        <!-- Messages -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {% if message.tags == 'error' %}
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                    {% elif message.tags == 'success' %}
+                                        <i class="bi bi-check-circle me-2"></i>
+                                    {% elif message.tags == 'warning' %}
+                                        <i class="bi bi-exclamation-circle me-2"></i>
+                                    {% else %}
+                                        <i class="bi bi-info-circle me-2"></i>
+                                    {% endif %}
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.username.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person me-1"></i>Foydalanuvchi nomi
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="{{ form.username.id_for_label }}"
+                                       name="{{ form.username.name }}"
+                                       placeholder="Foydalanuvchi nomini kiriting"
+                                       required>
+                                {% if form.username.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.username.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="{{ form.password.id_for_label }}" class="form-label">
+                                    <i class="bi bi-lock me-1"></i>Parol
+                                </label>
+                                <input type="password" 
+                                       class="form-control form-control-lg" 
+                                       id="{{ form.password.id_for_label }}"
+                                       name="{{ form.password.name }}"
+                                       placeholder="Parolni kiriting"
+                                       required>
+                                {% if form.password.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.password.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" style="background: linear-gradient(45deg, #667eea, #764ba2); border: none;">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Kirish
+                            </button>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <small class="text-muted">
+                                <i class="bi bi-shield-check me-1"></i>
+                                Xavfsiz kirish tizimi
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Demo accounts info -->
+                <div class="card mt-3 bg-light border-0">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-center mb-3">
+                            <i class="bi bi-info-circle me-1"></i>Demo hisoblar
+                        </h6>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="d-block text-primary fw-bold">Admin</small>
+                                <small class="text-muted">admin / admin123</small>
+                            </div>
+                            <div class="col-4">
+                                <small class="d-block text-success fw-bold">Manager</small>
+                                <small class="text-muted">manager / manager123</small>
+                            </div>
+                            <div class="col-4">
+                                <small class="d-block text-warning fw-bold">Chef</small>
+                                <small class="text-muted">chef / chef123</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 1rem;
+    }
+    .btn-primary {
+        font-weight: 600;
+        border-radius: 0.5rem;
+    }
+    .form-control-lg {
+        border-radius: 0.5rem;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    .form-control-lg:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+</style>
+{% endblock %}

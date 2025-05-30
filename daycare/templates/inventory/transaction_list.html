@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tranzaksiyalar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .transaction-card {
+        transition: transform 0.2s;
+    }
+    .transaction-card:hover {
+        transform: translateY(-1px);
+    }
+    .transaction-IN { border-left: 4px solid #28a745; }
+    .transaction-OUT { border-left: 4px solid #fd7e14; }
+    .transaction-ADJUSTMENT { border-left: 4px solid #007bff; }
+    .transaction-WASTE { border-left: 4px solid #dc3545; }
+    .transaction-TRANSFER { border-left: 4px solid #6f42c1; }
+
+    .transaction-type-IN { color: #28a745; font-weight: 600; }
+    .transaction-type-OUT { color: #fd7e14; font-weight: 600; }
+    .transaction-type-ADJUSTMENT { color: #007bff; font-weight: 600; }
+    .transaction-type-WASTE { color: #dc3545; font-weight: 600; }
+    .transaction-type-TRANSFER { color: #6f42c1; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Tranzaksiyalar</h1>
+                    <p class="text-muted">Barcha zaxira tranzaksiyalari tarixi</p>
+                </div>
+                {% if user.role.permissions.can_manage_inventory %}
+                <a href="{% url 'inventory:transaction_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Yangi Tranzaksiya
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Qidirish</label>
+                            <input type="text" name="search" class="form-control"
+                                   placeholder="Ingredient, yetkazib beruvchi, hisob-faktura..."
+                                   value="{{ search_query }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tranzaksiya turi</label>
+                            <select name="type" class="form-select">
+                                <option value="">Barcha turlar</option>
+                                {% for value, label in transaction_types %}
+                                <option value="{{ value }}" {% if transaction_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sana oralig'i</label>
+                            <input type="date" name="date_from" class="form-control"
+                                   value="{{ request.GET.date_from }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i> Qidirish
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions List -->
+    <div class="row">
+        {% for transaction in page_obj %}
+        <div class="col-12 mb-3">
+            <div class="card transaction-card border-0 shadow-sm transaction-{{ transaction.transaction_type }}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <h6 class="mb-1">
+                                <a href="{% url 'inventory:ingredient_detail' transaction.ingredient.pk %}"
+                                   class="text-decoration-none">
+                                    {{ transaction.ingredient.name }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">
+                                <i class="bi bi-tag"></i> {{ transaction.ingredient.category.name }}
+                            </small>
+                        </div>
+
+                        <div class="col-md-2">
+                            <span class="transaction-type-{{ transaction.transaction_type }}">
+                                {% if transaction.transaction_type == 'IN' %}
+                                    <i class="bi bi-arrow-down-circle"></i>
+                                {% elif transaction.transaction_type == 'OUT' %}
+                                    <i class="bi bi-arrow-up-circle"></i>
+                                {% elif transaction.transaction_type == 'ADJUSTMENT' %}
+                                    <i class="bi bi-sliders"></i>
+                                {% elif transaction.transaction_type == 'WASTE' %}
+                                    <i class="bi bi-trash"></i>
+                                {% elif transaction.transaction_type == 'TRANSFER' %}
+                                    <i class="bi bi-arrow-left-right"></i>
+                                {% endif %}
+                                {{ transaction.get_transaction_type_display }}
+                            </span>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="fw-bold">
+                                {{ transaction.quantity|floatformat:1 }} {{ transaction.ingredient.unit }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            {% if transaction.total_cost %}
+                            <div class="fw-medium">{{ transaction.total_cost|floatformat:0 }} so'm</div>
+                            {% endif %}
+                            {% if transaction.supplier %}
+                            <small class="text-muted">{{ transaction.supplier|truncatechars:20 }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="text-muted small">
+                                <i class="bi bi-calendar"></i>
+                                {{ transaction.created_at|date:"d.m.Y H:i" }}
+                            </div>
+                            <div class="text-muted small">
+                                <i class="bi bi-person"></i>
+                                {{ transaction.created_by.get_full_name|default:transaction.created_by.username|truncatechars:15 }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-1 text-end">
+                            {% if transaction.notes %}
+                            <button class="btn btn-sm btn-outline-info" type="button"
+                                    data-bs-toggle="tooltip" title="{{ transaction.notes }}">
+                                <i class="bi bi-chat-dots"></i>
+                            </button>
+                            {% endif %}
+                            {% if transaction.invoice_number %}
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="tooltip" title="Hisob-faktura: {{ transaction.invoice_number }}">
+                                <i class="bi bi-receipt"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Additional Transaction Info -->
+                    {% if transaction.expiry_date or transaction.notes %}
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="border-top pt-2">
+                                {% if transaction.expiry_date %}
+                                <small class="text-muted me-3">
+                                    <i class="bi bi-calendar-event"></i>
+                                    Muddat: {{ transaction.expiry_date|date:"d.m.Y" }}
+                                </small>
+                                {% endif %}
+                                {% if transaction.notes %}
+                                <small class="text-muted">
+                                    <i class="bi bi-chat-text"></i>
+                                    {{ transaction.notes|truncatechars:80 }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-receipt display-4 text-muted"></i>
+                    <h5 class="mt-3">Tranzaksiyalar topilmadi</h5>
+                    <p class="text-muted">Qidiruv shartlaringizni o'zgartiring yoki yangi tranzaksiya yarating.</p>
+                    {% if user.role.permissions.can_manage_inventory %}
+                    <a href="{% url 'inventory:transaction_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Yangi Tranzaksiya Yaratish
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% include 'inventory/pagination.html' %}
+</div>
+{% endblock %}

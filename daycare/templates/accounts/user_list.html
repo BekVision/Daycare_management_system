@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+
+{% block title %}Foydalanuvchilar ro'yxati{% endblock %}
+{% block page_title %}Foydalanuvchilar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Foydalanuvchilar ro'yxati</h3>
+        <p class="text-muted mb-0">Tizimdagi barcha foydalanuvchilarni boshqaring</p>
+    </div>
+    <a href="{% url 'accounts:user_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Yangi foydalanuvchi
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Qidiruv</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           value="{{ request.GET.search }}"
+                           placeholder="Ism, email yoki username bo'yicha qidiring">
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="role" class="form-label">Rol</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="">Barcha rollar</option>
+                    <option value="admin" {% if request.GET.role == 'admin' %}selected{% endif %}>Admin</option>
+                    <option value="manager" {% if request.GET.role == 'manager' %}selected{% endif %}>Manager</option>
+                    <option value="chef" {% if request.GET.role == 'chef' %}selected{% endif %}>Chef</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="status" class="form-label">Holat</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Barcha holatlar</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Faol</option>
+                    <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Nofaol</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-people me-2"></i>
+                Jami: {{ users|length }} foydalanuvchi
+            </h5>
+            
+            <!-- Export Options -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download me-1"></i>Eksport
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="?{{ request.GET.urlencode }}&export=csv">
+                        <i class="bi bi-file-earmark-text me-2"></i>CSV
+                    </a></li>
+                    <li><a class="dropdown-item" href="?{{ request.GET.urlencode }}&export=excel">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Excel
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0">
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th class="border-0">Foydalanuvchi</th>
+                            <th class="border-0">Rol</th>
+                            <th class="border-0">Holat</th>
+                            <th class="border-0">So'nggi kirish</th>
+                            <th class="border-0">Yaratilgan</th>
+                            <th class="border-0 text-center">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user_item in users %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input user-checkbox" value="{{ user_item.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        {% if user_item.profile.photo %}
+                                            <img src="{{ user_item.profile.photo.url }}" 
+                                                 alt="{{ user_item.get_full_name }}" 
+                                                 class="rounded-circle"
+                                                 style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-person text-primary"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ user_item.get_full_name }}</div>
+                                        <small class="text-muted">
+                                            <i class="bi bi-at me-1"></i>{{ user_item.username }}
+                                        </small>
+                                        {% if user_item.email %}
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="bi bi-envelope me-1"></i>{{ user_item.email }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if user_item.role.name == 'admin' %}primary{% elif user_item.role.name == 'manager' %}success{% else %}warning{% endif %} fs-6">
+                                    {{ user_item.role.get_name_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user_item.is_active %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Faol
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle me-1"></i>Nofaol
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user_item.last_login %}
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        {{ user_item.last_login|timesince }} oldin
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">Hech qachon</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    {{ user_item.date_joined|date:"d.m.Y" }}
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="alert('Bu funksiya hali ishlab chiqilmagan')">
+                                                <i class="bi bi-eye me-2"></i>Ko'rish
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="alert('Bu funksiya hali ishlab chiqilmagan')">
+                                                <i class="bi bi-pencil me-2"></i>Tahrirlash
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% if user_item.is_active %}
+                                        <li>
+                                            <a class="dropdown-item text-warning" href="#" onclick="alert('Bu funksiya hali ishlab chiqilmagan')">
+                                                <i class="bi bi-pause me-2"></i>Bloklash
+                                            </a>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <a class="dropdown-item text-success" href="#" onclick="alert('Bu funksiya hali ishlab chiqilmagan')">
+                                                <i class="bi bi-play me-2"></i>Faollashtirish
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        {% if user_item != user %}
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#"
+                                               onclick="alert('Bu funksiya hali ishlab chiqilmagan')">
+                                                <i class="bi bi-trash me-2"></i>O'chirish
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Bulk Actions -->
+            <div class="card-footer bg-transparent border-0" id="bulkActions" style="display: none;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="text-muted">
+                        <span id="selectedCount">0</span> ta foydalanuvchi tanlandi
+                    </span>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="bulkAction('deactivate')">
+                            <i class="bi bi-pause me-1"></i>Bloklash
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="bulkAction('activate')">
+                            <i class="bi bi-play me-1"></i>Faollashtirish
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="bulkAction('delete')">
+                            <i class="bi bi-trash me-1"></i>O'chirish
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="card-footer bg-transparent border-0">
+                <nav aria-label="Pagination">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page=1">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people text-muted" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-muted">Foydalanuvchi topilmadi</h5>
+                <p class="text-muted">Qidiruv shartlaringizni o'zgartiring yoki yangi foydalanuvchi yarating</p>
+                <a href="{% url 'accounts:user_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Yangi foydalanuvchi
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Select All functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+    updateBulkActions();
+});
+
+// Individual checkbox functionality
+document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBulkActions);
+});
+
+function updateBulkActions() {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (checkedBoxes.length > 0) {
+        bulkActions.style.display = 'block';
+        selectedCount.textContent = checkedBoxes.length;
+    } else {
+        bulkActions.style.display = 'none';
+    }
+}
+
+function bulkAction(action) {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const userIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    if (userIds.length === 0) {
+        alert('Hech qanday foydalanuvchi tanlanmagan!');
+        return;
+    }
+    
+    let message = '';
+    switch(action) {
+        case 'activate':
+            message = `${userIds.length} ta foydalanuvchini faollashtirishni tasdiqlaysizmi?`;
+            break;
+        case 'deactivate':
+            message = `${userIds.length} ta foydalanuvchini bloklashni tasdiqlaysizmi?`;
+            break;
+        case 'delete':
+            message = `${userIds.length} ta foydalanuvchini o'chirishni tasdiqlaysizmi? Bu amal bekor qilib bo'lmaydi!`;
+            break;
+    }
+    
+    if (confirm(message)) {
+        // Ajax request yoki form submit
+        console.log(`${action} action for users:`, userIds);
+        // Bu yerda server ga so'rov yuborish kerak
+    }
+}
+
+// Auto-submit search form
+document.querySelectorAll('#role, #status').forEach(select => {
+    select.addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+
+<style>
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .btn-sm {
+        font-size: 0.775rem;
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+    
+    .dropdown-menu {
+        border: 0;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+</style>
+{% endblock %}

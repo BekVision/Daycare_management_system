@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Sahifa topilmadi - 404{% endblock %}
+{% block page_title %}Sahifa topilmadi{% endblock %}
+
+{% block content %}
+<div class="container-fluid d-flex align-items-center justify-content-center" style="min-height: 60vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 6rem;"></i>
+        </div>
+        
+        <h1 class="display-4 fw-bold text-primary mb-3">404</h1>
+        <h2 class="h4 mb-3">Sahifa topilmadi</h2>
+        <p class="text-muted mb-4 lead">
+            Kechirasiz, siz qidirayotgan sahifa mavjud emas yoki o'chirilgan.
+        </p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm bg-light">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">
+                            <i class="bi bi-lightbulb me-2"></i>Nima qilish mumkin?
+                        </h5>
+                        <ul class="list-unstyled mb-3">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                URL manzilini tekshiring
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Bosh sahifaga qayting
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Navigatsiya menyusidan foydalaning
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Administrator bilan bog'laning
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary btn-lg me-3">
+                <i class="bi bi-house me-2"></i>Bosh sahifa
+            </a>
+            <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-arrow-left me-2"></i>Orqaga qaytish
+            </button>
+        </div>
+        
+        <!-- Quick Navigation -->
+        {% if user.is_authenticated %}
+        <div class="mt-5">
+            <h6 class="text-muted mb-3">Tezkor havolalar</h6>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a href="{% url 'accounts:dashboard' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                </a>
+                
+                {% if user.is_chef or user.is_manager or user.is_admin %}
+                <a href="/services/" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-cup-hot me-1"></i>Ovqat berish
+                </a>
+                {% endif %}
+                
+                {% if user.is_manager or user.is_admin %}
+                <a href="/inventory/" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-boxes me-1"></i>Ombor
+                </a>
+                <a href="/reports/" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-graph-up me-1"></i>Hisobotlar
+                </a>
+                {% endif %}
+                
+                <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-person me-1"></i>Profil
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Contact Information -->
+        <div class="mt-5 p-3 bg-light rounded">
+            <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Agar muammo davom etsa, administrator bilan bog'laning: 
+                <a href="mailto:admin@daycare.com" class="text-decoration-none">admin@daycare.com</a>
+            </small>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}

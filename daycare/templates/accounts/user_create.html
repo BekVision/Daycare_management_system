@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block title %}Yangi foydalanuvchi yaratish{% endblock %}
+{% block page_title %}Yangi foydalanuvchi{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-plus me-2"></i>Yangi foydalanuvchi yaratish
+                    </h5>
+                    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- User Account Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-person-circle me-2"></i>Hisob ma'lumotlari
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <!-- Username -->
+                        <div class="col-md-6">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">
+                                <i class="bi bi-at me-1"></i>Foydalanuvchi nomi <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.username.id_for_label }}"
+                                   name="{{ form.username.name }}"
+                                   value="{{ form.username.value|default:'' }}"
+                                   placeholder="foydalanuvchi_nomi"
+                                   required>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.username.errors.0 }}
+                                </div>
+                            {% else %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Faqat harflar, raqamlar va _ ishlatish mumkin
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                <i class="bi bi-envelope me-1"></i>Email manzil <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" 
+                                   class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.email.id_for_label }}"
+                                   name="{{ form.email.name }}"
+                                   value="{{ form.email.value|default:'' }}"
+                                   placeholder="user@example.com"
+                                   required>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.email.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Role -->
+                        <div class="col-md-6">
+                            <label for="{{ form.role.id_for_label }}" class="form-label">
+                                <i class="bi bi-person-badge me-1"></i>Rol <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select {% if form.role.errors %}is-invalid{% endif %}" 
+                                    id="{{ form.role.id_for_label }}"
+                                    name="{{ form.role.name }}"
+                                    required>
+                                <option value="">Rolni tanlang</option>
+                                {% for role in form.role.queryset %}
+                                    <option value="{{ role.id }}" 
+                                            {% if form.role.value == role.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ role.get_name_display }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.role.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.role.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Password Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-shield-lock me-2"></i>Parol ma'lumotlari
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <!-- Password -->
+                        <div class="col-md-6">
+                            <label for="{{ form.password1.id_for_label }}" class="form-label">
+                                <i class="bi bi-lock me-1"></i>Parol <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" 
+                                       class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.password1.id_for_label }}"
+                                       name="{{ form.password1.name }}"
+                                       placeholder="Parolni kiriting"
+                                       required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('{{ form.password1.id_for_label }}')">
+                                    <i class="bi bi-eye" id="{{ form.password1.id_for_label }}_icon"></i>
+                                </button>
+                            </div>
+                            {% if form.password1.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.password1.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="form-text">
+                                    <small>
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Kamida 8 ta belgi, har xil turda belgilar ishlatish tavsiya etiladi
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Confirm Password -->
+                        <div class="col-md-6">
+                            <label for="{{ form.password2.id_for_label }}" class="form-label">
+                                <i class="bi bi-lock-fill me-1"></i>Parolni tasdiqlash <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" 
+                                       class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.password2.id_for_label }}"
+                                       name="{{ form.password2.name }}"
+                                       placeholder="Parolni qayta kiriting"
+                                       required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('{{ form.password2.id_for_label }}')">
+                                    <i class="bi bi-eye" id="{{ form.password2.id_for_label }}_icon"></i>
+                                </button>
+                            </div>
+                            {% if form.password2.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.password2.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Role Description -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card bg-light border-0">
+                                <div class="card-body p-3">
+                                    <h6 class="card-title mb-2">
+                                        <i class="bi bi-info-circle me-1"></i>Rol tavsiflari
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-2 h-100">
+                                                <h6 class="text-primary mb-1">
+                                                    <i class="bi bi-person-gear me-1"></i>Admin
+                                                </h6>
+                                                <small class="text-muted">
+                                                    Barcha funksiyalarga kirish, foydalanuvchilarni boshqarish, 
+                                                    hisobotlar va tizim sozlamalari
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-2 h-100">
+                                                <h6 class="text-success mb-1">
+                                                    <i class="bi bi-briefcase me-1"></i>Manager
+                                                </h6>
+                                                <small class="text-muted">
+                                                    Ombor boshqaruvi, hisobotlarni ko'rish, 
+                                                    ovqat berish va inventar nazorati
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-2 h-100">
+                                                <h6 class="text-warning mb-1">
+                                                    <i class="bi bi-chef-hat me-1"></i>Chef
+                                                </h6>
+                                                <small class="text-muted">
+                                                    Faqat ovqat berish imkoniyati, 
+                                                    ovqatlar ro'yxatini ko'rish
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Password Generator -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border-primary border-opacity-25">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="bi bi-key me-1"></i>Parol generator
+                                            </h6>
+                                            <small class="text-muted">Xavfsiz parol avtomatik yaratish</small>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="generatePassword()">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>Yaratish
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-1"></i>Foydalanuvchi yaratish
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Information -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-question-circle me-2"></i>Yordam
+                </h6>
+                <ul class="list-unstyled mb-0 small text-muted">
+                    <li class="mb-1">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        Foydalanuvchi nomi noyob bo'lishi kerak
+                    </li>
+                    <li class="mb-1">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        Email manzil to'g'ri formatda bo'lishi kerak
+                    </li>
+                    <li class="mb-1">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        Parol kamida 8 ta belgidan iborat bo'lishi kerak
+                    </li>
+                    <li class="mb-1">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        Rol foydalanuvchining imkoniyatlarini belgilaydi
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        Yaratilgandan keyin foydalanuvchi darhol tizimga kira oladi
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Password visibility toggle
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(fieldId + '_icon');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+// Password generator
+function generatePassword() {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "";
+    
+    // Ensure at least one character from each type
+    password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]; // lowercase
+    password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // uppercase
+    password += "0123456789"[Math.floor(Math.random() * 10)]; // number
+    password += "!@#$%^&*"[Math.floor(Math.random() * 8)]; // special
+    
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+    }
+    
+    // Shuffle the password
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    
+    // Set the password fields
+    document.getElementById('{{ form.password1.id_for_label }}').value = password;
+    document.getElementById('{{ form.password2.id_for_label }}').value = password;
+    
+    // Show a notification
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show mt-2';
+    notification.innerHTML = `
+        <i class="bi bi-check-circle me-2"></i>
+        Xavfsiz parol yaratildi! Iltimos, foydalanuvchiga ushbu parolni xavfsiz tarzda yetkazing.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const form = document.querySelector('form');
+    form.insertBefore(notification, form.firstChild);
+    
+    // Auto-remove notification after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const usernameField = document.getElementById('{{ form.username.id_for_label }}');
+    const emailField = document.getElementById('{{ form.email.id_for_label }}');
+    const password1Field = document.getElementById('{{ form.password1.id_for_label }}');
+    const password2Field = document.getElementById('{{ form.password2.id_for_label }}');
+    
+    // Username validation
+    usernameField.addEventListener('input', function() {
+        const value = this.value;
+        const valid = /^[a-zA-Z0-9_]+$/.test(value);
+        
+        if (value && !valid) {
+            this.classList.add('is-invalid');
+            this.classList.remove('is-valid');
+        } else if (value) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-invalid', 'is-valid');
+        }
+    });
+    
+    // Email validation
+    emailField.addEventListener('input', function() {
+        const value = this.value;
+        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        
+        if (value && !valid) {
+            this.classList.add('is-invalid');
+            this.classList.remove('is-valid');
+        } else if (value) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-invalid', 'is-valid');
+        }
+    });
+    
+    // Password confirmation validation
+    function validatePasswordMatch() {
+        const password1 = password1Field.value;
+        const password2 = password2Field.value;
+        
+        if (password2 && password1 !== password2) {
+            password2Field.classList.add('is-invalid');
+            password2Field.classList.remove('is-valid');
+        } else if (password2) {
+            password2Field.classList.remove('is-invalid');
+            password2Field.classList.add('is-valid');
+        } else {
+            password2Field.classList.remove('is-invalid', 'is-valid');
+        }
+    }
+    
+    password1Field.addEventListener('input', validatePasswordMatch);
+    password2Field.addEventListener('input', validatePasswordMatch);
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check required fields
+        const requiredFields = [usernameField, emailField, password1Field, password2Field];
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        // Check password match
+        if (password1Field.value !== password2Field.value) {
+            password2Field.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Iltimos, barcha majburiy maydonlarni to\'g\'ri to\'ldiring!');
+        }
+    });
+});
+</script>
+
+<style>
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #5a67d8, #6b46c1);
+        transform: translateY(-1px);
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .is-valid {
+        border-color: #198754;
+    }
+    
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}

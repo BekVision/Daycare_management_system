@@ -1,0 +1,485 @@
+<!-- templates/inventory/category_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kategoriyalar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Kategoriyalar</h1>
+                    <p class="text-muted">Ingredient kategoriyalarini boshqarish</p>
+                </div>
+                {% if user.role.permissions.can_manage_inventory %}
+                <a href="{% url 'inventory:category_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Yangi Kategoriya
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="d-flex">
+                <input type="text" name="search" class="form-control" placeholder="Kategoriya qidirish..."
+                       value="{{ search_query }}">
+                <button type="submit" class="btn btn-outline-primary ms-2">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="row">
+        {% for category in page_obj %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="card-title">{{ category.name }}</h6>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% if user.role.permissions.can_manage_inventory %}
+                                <li><a class="dropdown-item" href="{% url 'inventory:category_update' category.pk %}">
+                                    <i class="bi bi-pencil"></i> Tahrirlash
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'inventory:category_delete' category.pk %}">
+                                    <i class="bi bi-trash"></i> O'chirish
+                                </a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    {% if category.description %}
+                    <p class="card-text text-muted small">{{ category.description|truncatewords:15 }}</p>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            {{ category.ingredients.count }} ta ingredient
+                        </small>
+                        <span class="badge {% if category.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if category.is_active %}Faol{% else %}Faol emas{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-folder display-4 text-muted"></i>
+                <h5 class="mt-3">Kategoriyalar topilmadi</h5>
+                <p class="text-muted">Yangi kategoriya yarating yoki qidiruv shartlarini o'zgartiring.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% include 'inventory/pagination.html' %}
+</div>
+{% endblock %}
+
+<!-- ================================ -->
+
+<!-- templates/inventory/category_form.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3">{{ title }}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:category_list' %}">Kategoriyalar</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.display_order.id_for_label }}" class="form-label">{{ form.display_order.label }}</label>
+                                    {{ form.display_order }}
+                                    {% if form.display_order.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.display_order.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch mt-4">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            {{ form.is_active.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Orqaga
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Saqlash
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- ================================ -->
+
+<!-- templates/inventory/stock_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Zaxiralar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stock-card {
+        transition: transform 0.2s;
+    }
+    .stock-card:hover {
+        transform: translateY(-2px);
+    }
+    .stock-level {
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Zaxiralar</h1>
+                    <p class="text-muted">Barcha ingredient zaxiralarini ko'rish</p>
+                </div>
+                {% if user.role.permissions.can_manage_inventory %}
+                <a href="{% url 'inventory:transaction_create' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Tranzaksiya
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            {{ search_form.search }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ search_form.category }}
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check">
+                                {{ search_form.low_stock_only }}
+                                {{ search_form.low_stock_only.label_tag }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check">
+                                {{ search_form.expired_only }}
+                                {{ search_form.expired_only.label_tag }}
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Cards -->
+    <div class="row">
+        {% for stock in page_obj %}
+        <div class="col-xl-4 col-lg-6 mb-4">
+            <div class="card stock-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="card-title mb-1">
+                                <a href="{% url 'inventory:ingredient_detail' stock.ingredient.pk %}"
+                                   class="text-decoration-none">
+                                    {{ stock.ingredient.name }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">{{ stock.ingredient.category.name }}</small>
+                        </div>
+                        {% if user.role.permissions.can_manage_inventory %}
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="bi bi-gear"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'inventory:stock_update' stock.pk %}">
+                                    <i class="bi bi-pencil"></i> Yangilash
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'inventory:stock_adjustment' stock.ingredient.pk %}">
+                                    <i class="bi bi-sliders"></i> Sozlash
+                                </a></li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Stock Quantity -->
+                    <div class="text-center mb-3">
+                        <div class="h4 mb-0">{{ stock.current_quantity|floatformat:1 }}</div>
+                        <small class="text-muted">{{ stock.ingredient.unit }}</small>
+                    </div>
+
+                    <!-- Stock Level Progress -->
+                    {% if stock.ingredient.max_threshold %}
+                    <div class="mb-3">
+                        {% widthratio stock.current_quantity stock.ingredient.max_threshold 100 as progress %}
+                        <div class="stock-level bg-light">
+                            <div class="h-100 {% if stock.current_quantity <= stock.ingredient.min_threshold %}bg-danger{% elif stock.current_quantity <= stock.ingredient.min_threshold|add:stock.ingredient.min_threshold %}bg-warning{% else %}bg-success{% endif %}"
+                                 style="width: {{ progress }}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">0</small>
+                            <small class="text-muted">{{ stock.ingredient.max_threshold }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Status Badge -->
+                    <div class="text-center mb-3">
+                        {% if stock.current_quantity <= 0 %}
+                            <span class="badge bg-danger">Tugagan</span>
+                        {% elif stock.current_quantity <= stock.ingredient.min_threshold %}
+                            <span class="badge bg-warning">Kam zaxira</span>
+                        {% else %}
+                            <span class="badge bg-success">Yaxshi</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div class="row text-center small">
+                        {% if stock.last_restock_date %}
+                        <div class="col-6">
+                            <div class="text-muted">Oxirgi to'ldirish</div>
+                            <div>{{ stock.last_restock_date|date:"d.m.Y" }}</div>
+                        </div>
+                        {% endif %}
+                        {% if stock.expiry_date %}
+                        <div class="col-6">
+                            <div class="text-muted">Muddat tugashi</div>
+                            <div {% if stock.expiry_date < today %}class="text-danger"{% endif %}>
+                                {{ stock.expiry_date|date:"d.m.Y" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <h5 class="mt-3">Zaxiralar topilmadi</h5>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% include 'inventory/pagination.html' %}
+</div>
+{% endblock %}
+
+<!-- ================================ -->
+
+<!-- templates/inventory/transaction_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}Tranzaksiyalar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .transaction-IN { border-left: 4px solid #28a745; }
+    .transaction-OUT { border-left: 4px solid #fd7e14; }
+    .transaction-ADJUSTMENT { border-left: 4px solid #007bff; }
+    .transaction-WASTE { border-left: 4px solid #dc3545; }
+    .transaction-TRANSFER { border-left: 4px solid #6f42c1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Tranzaksiyalar</h1>
+                    <p class="text-muted">Barcha zaxira tranzaksiyalari</p>
+                </div>
+                {% if user.role.permissions.can_manage_inventory %}
+                <a href="{% url 'inventory:transaction_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Yangi Tranzaksiya
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" name="search" class="form-control" placeholder="Qidirish..."
+                                   value="{{ search_query }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="type" class="form-select">
+                                <option value="">Barcha turlar</option>
+                                {% for value, label in transaction_types %}
+                                <option value="{{ value }}" {% if transaction_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> Qidirish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions List -->
+    <div class="row">
+        {% for transaction in page_obj %}
+        <div class="col-12 mb-3">
+            <div class="card border-0 shadow-sm transaction-{{ transaction.transaction_type }}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <h6 class="mb-1">{{ transaction.ingredient.name }}</h6>
+                            <small class="text-muted">{{ transaction.ingredient.category.name }}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge bg-secondary">
+                                {{ transaction.get_transaction_type_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="fw-bold">{{ transaction.quantity }} {{ transaction.ingredient.unit }}</div>
+                        </div>
+                        <div class="col-md-2">
+                            {% if transaction.total_cost %}
+                            <div>{{ transaction.total_cost|floatformat:0 }} so'm</div>
+                            {% endif %}
+                            {% if transaction.supplier %}
+                            <small class="text-muted">{{ transaction.supplier }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-muted small">
+                                {{ transaction.created_at|date:"d.m.Y H:i" }}
+                            </div>
+                            <div class="text-muted small">
+                                {{ transaction.created_by.get_full_name|default:transaction.created_by.username }}
+                            </div>
+                        </div>
+                        <div class="col-md-1 text-end">
+                            {% if transaction.notes %}
+                            <i class="bi bi-chat-dots text-muted" data-bs-toggle="tooltip"
+                               title="{{ transaction.notes }}"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-receipt display-4 text-muted"></i>
+                <h5 class="mt-3">Tranzaksiyalar topilmadi</h5>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% include 'inventory/pagination.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+</script>
+{% endblock %}

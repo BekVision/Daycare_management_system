@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tizim salomatligi - Daycare</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .health-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        .health-card:hover {
+            transform: translateY(-5px);
+        }
+        .health-healthy { border-left: 5px solid #28a745; }
+        .health-warning { border-left: 5px solid #ffc107; }
+        .health-error { border-left: 5px solid #dc3545; }
+        .health-down { border-left: 5px solid #6c757d; }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'common:dashboard' %}">
+                <i class="fas fa-baby me-2"></i>Daycare Admin
+            </a>
+            <div class="d-flex">
+                <form method="post" action="{% url 'common:system_health_check' %}" class="me-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-light btn-sm">
+                        <i class="fas fa-sync-alt me-1"></i>Tekshirish
+                    </button>
+                </form>
+                <span class="navbar-text">Tizim salomatligi</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card health-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h3 class="text-success">{{ stats.healthy }}</h3>
+                        <p class="mb-0">Sog'lom</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card health-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h3 class="text-warning">{{ stats.warning }}</h3>
+                        <p class="mb-0">Ogohlantirish</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card health-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                        <h3 class="text-danger">{{ stats.error }}</h3>
+                        <p class="mb-0">Xato</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card health-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-power-off fa-3x text-secondary mb-3"></i>
+                        <h3 class="text-secondary">{{ stats.down }}</h3>
+                        <p class="mb-0">Ishlamayapti</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Current Status -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-heartbeat me-2"></i>Hozirgi holat
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for component, health in current_status.items %}
+                            {% if health %}
+                                <div class="card health-card health-{{ health.status|lower }} mb-3">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ health.get_component_display }}</h6>
+                                                <span class="badge bg-{% if health.status == 'HEALTHY' %}success{% elif health.status == 'WARNING' %}warning{% elif health.status == 'ERROR' %}danger{% else %}secondary{% endif %}">
+                                                    {{ health.get_status_display }}
+                                                </span>
+                                            </div>
+                                            <div class="text-end">
+                                                {% if health.response_time %}
+                                                    <small class="text-muted">{{ health.response_time|floatformat:3 }}s</small>
+                                                    <br>
+                                                {% endif %}
+                                                <small class="text-muted">{{ health.checked_at|timesince }} oldin</small>
+                                            </div>
+                                        </div>
+                                        {% if health.error_message %}
+                                            <div class="mt-2">
+                                                <small class="text-danger">
+                                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                                    {{ health.error_message|truncatechars:80 }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="card health-card health-down mb-3">
+                                    <div class="card-body">
+                                        <h6 class="mb-1">{{ component }}</h6>
+                                        <span class="badge bg-secondary">Tekshirilmagan</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Checks -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>So'nggi tekshiruvlar
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Komponent</th>
+                                        <th>Holat</th>
+                                        <th>Vaqt</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for check in recent_checks %}
+                                        <tr>
+                                            <td>{{ check.get_component_display }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if check.status == 'HEALTHY' %}success{% elif check.status == 'WARNING' %}warning{% elif check.status == 'ERROR' %}danger{% else %}secondary{% endif %}">
+                                                    {{ check.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small>{{ check.checked_at|date:"H:i" }}</small>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">
+                                                Ma'lumot mavjud emas
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto refresh every 30 seconds
+        setTimeout(function() {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>

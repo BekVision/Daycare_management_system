@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ingredientlar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stock-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .stock-good { background-color: #d4edda; color: #155724; }
+    .stock-low { background-color: #fff3cd; color: #856404; }
+    .stock-empty { background-color: #f8d7da; color: #721c24; }
+    .ingredient-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .ingredient-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Ingredientlar</h1>
+                    <p class="text-muted">Barcha ingredientlar ro'yxati</p>
+                </div>
+                {% if user.role.permissions.can_manage_inventory %}
+                <div>
+                    <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Yangi Ingredient
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            {{ search_form.search.label_tag }}
+                            {{ search_form.search }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ search_form.category.label_tag }}
+                            {{ search_form.category }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="form-check">
+                                {{ search_form.low_stock_only }}
+                                {{ search_form.low_stock_only.label_tag }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="form-check">
+                                {{ search_form.expired_only }}
+                                {{ search_form.expired_only.label_tag }}
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredients List -->
+    <div class="row">
+        {% for ingredient in page_obj %}
+        <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+            <div class="card ingredient-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="card-title mb-1">
+                                <a href="{% url 'inventory:ingredient_detail' ingredient.pk %}" 
+                                   class="text-decoration-none">
+                                    {{ ingredient.name }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">
+                                <i class="bi bi-tag"></i> {{ ingredient.category.name }}
+                            </small>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                    type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:ingredient_detail' ingredient.pk %}">
+                                        <i class="bi bi-eye"></i> Ko'rish
+                                    </a>
+                                </li>
+                                {% if user.role.permissions.can_manage_inventory %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:ingredient_update' ingredient.pk %}">
+                                        <i class="bi bi-pencil"></i> Tahrirlash
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:stock_adjustment' ingredient.pk %}">
+                                        <i class="bi bi-gear"></i> Zaxira sozlash
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{% url 'inventory:ingredient_delete' ingredient.pk %}">
+                                        <i class="bi bi-trash"></i> O'chirish
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Stock Information -->
+                    {% if ingredient.stock %}
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h5 mb-0">{{ ingredient.stock.current_quantity|floatformat:1 }}</div>
+                                <small class="text-muted">{{ ingredient.unit }}</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                {% if ingredient.stock.current_quantity <= 0 %}
+                                    <span class="stock-status stock-empty">Tugagan</span>
+                                {% elif ingredient.stock.current_quantity <= ingredient.min_threshold %}
+                                    <span class="stock-status stock-low">Kam</span>
+                                {% else %}
+                                    <span class="stock-status stock-good">Yaxshi</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Progress Bar -->
+                    {% if ingredient.max_threshold %}
+                    <div class="mb-3">
+                        {% widthratio ingredient.stock.current_quantity ingredient.max_threshold 100 as progress_width %}
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar 
+                                {% if ingredient.stock.current_quantity <= ingredient.min_threshold %}bg-danger
+                                {% elif ingredient.stock.current_quantity <= ingredient.min_threshold|add:ingredient.min_threshold %}bg-warning
+                                {% else %}bg-success{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ progress_width }}%">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">Min: {{ ingredient.min_threshold }}</small>
+                            <small class="text-muted">Max: {{ ingredient.max_threshold }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Additional Info -->
+                    <div class="row text-center">
+                        {% if ingredient.cost_per_unit %}
+                        <div class="col-6">
+                            <small class="text-muted d-block">Narx</small>
+                            <span class="fw-medium">{{ ingredient.cost_per_unit|floatformat:0 }} so'm</span>
+                        </div>
+                        {% endif %}
+                        {% if ingredient.stock.expiry_date %}
+                        <div class="col-6">
+                            <small class="text-muted d-block">Muddat</small>
+                            {% if ingredient.stock.expiry_date < today %}
+                                <span class="text-danger fw-medium">Tugagan</span>
+                            {% else %}
+                                <span class="fw-medium">{{ ingredient.stock.expiry_date|date:"d.m.Y" }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <!-- No Stock -->
+                    <div class="text-center py-3">
+                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                        <p class="mb-0 text-muted">Zaxira ma'lumoti yo'q</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if ingredient.description %}
+                <div class="card-footer bg-light border-0">
+                    <small class="text-muted">{{ ingredient.description|truncatewords:10 }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search display-4 text-muted"></i>
+                    <h5 class="mt-3">Ingredientlar topilmadi</h5>
+                    <p class="text-muted">Qidiruv shartlaringizni o'zgartiring yoki yangi ingredient qo'shing.</p>
+                    {% if user.role.permissions.can_manage_inventory %}
+                    <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Yangi Ingredient Qo'shish
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% include 'inventory/includes/pagination.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Quick stock update functionality
+function quickUpdateStock(ingredientId, currentStock) {
+    const newQuantity = prompt(`Yangi zaxira miqdorini kiriting (hozirda: ${currentStock}):`, currentStock);
+    
+    if (newQuantity !== null && !isNaN(newQuantity)) {
+        fetch(`{% url 'inventory:quick_stock_update' %}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                'stock_id': ingredientId,
+                'quantity': parseFloat(newQuantity)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Xatolik: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+</script>
+{% endblock %}

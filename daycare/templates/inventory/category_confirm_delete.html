@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Kategoriyani O'chirish{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Kategoriyani O'chirish
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-folder-x display-4 text-danger"></i>
+                    </div>
+
+                    <h5 class="text-center mb-4">Kategoriyani o'chirishni tasdiqlang</h5>
+
+                    <div class="alert alert-warning">
+                        <p class="mb-0">
+                            <strong>"{{ category.name }}"</strong> kategoriyasini o'chirmoqchimisiz?
+                        </p>
+                    </div>
+
+                    <!-- Category Details -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">Kategoriya nomi:</small>
+                                    <div class="fw-medium">{{ category.name }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Ingredientlar soni:</small>
+                                    <div class="fw-medium">{{ category.ingredients.count }} ta</div>
+                                </div>
+                            </div>
+                            {% if category.description %}
+                            <div class="mt-2">
+                                <small class="text-muted">Tavsif:</small>
+                                <div>{{ category.description }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Warning if category has ingredients -->
+                    {% if category.ingredients.count > 0 %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Xatolik:</strong> Bu kategoriyada {{ category.ingredients.count }} ta ingredient mavjud.
+                        Avval ularni o'chiring yoki boshqa kategoriyaga ko'chiring.
+
+                        <div class="mt-2">
+                            <strong>Mavjud ingredientlar:</strong>
+                            <ul class="mb-0 mt-1">
+                                {% for ingredient in category.ingredients.all|slice:":5" %}
+                                <li>{{ ingredient.name }}</li>
+                                {% endfor %}
+                                {% if category.ingredients.count > 5 %}
+                                <li><em>va yana {{ category.ingredients.count|add:"-5" }} ta...</em></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Bekor qilish
+                            </a>
+                            <button type="submit" class="btn btn-danger"
+                                    {% if category.ingredients.count > 0 %}disabled{% endif %}>
+                                <i class="bi bi-trash"></i> Ha, O'chirish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}Profilni tahrirlash - {{ user.get_full_name }}{% endblock %}
+{% block page_title %}Profilni tahrirlash{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Profilni tahrirlash
+                    </h5>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Current Profile Photo -->
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <div class="mb-3">
+                                {% if user.profile.photo %}
+                                    <img src="{{ user.profile.photo.url }}" 
+                                         alt="{{ user.get_full_name }}" 
+                                         class="rounded-circle border"
+                                         id="current-photo"
+                                         style="width: 120px; height: 120px; object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center border"
+                                         id="current-photo"
+                                         style="width: 120px; height: 120px;">
+                                        <i class="bi bi-person text-primary" style="font-size: 3rem;"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <!-- Photo Upload -->
+                        <div class="col-12">
+                            <label for="{{ form.photo.id_for_label }}" class="form-label">
+                                <i class="bi bi-camera me-1"></i>Profil rasmi
+                            </label>
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="{{ form.photo.id_for_label }}"
+                                   name="{{ form.photo.name }}"
+                                   accept="image/*"
+                                   onchange="previewImage(this)">
+                            {% if form.photo.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.photo.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                JPG, PNG formatida, maksimal 5MB
+                            </div>
+                        </div>
+                        
+                        <!-- Phone Number -->
+                        <div class="col-md-6">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                                <i class="bi bi-telephone me-1"></i>Telefon raqami
+                            </label>
+                            <input type="tel" 
+                                   class="form-control" 
+                                   id="{{ form.phone_number.id_for_label }}"
+                                   name="{{ form.phone_number.name }}"
+                                   value="{{ form.phone_number.value|default:'' }}"
+                                   placeholder="+998 90 123 45 67">
+                            {% if form.phone_number.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.phone_number.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Birth Date -->
+                        <div class="col-md-6">
+                            <label for="{{ form.birth_date.id_for_label }}" class="form-label">
+                                <i class="bi bi-calendar me-1"></i>Tug'ilgan sana
+                            </label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="{{ form.birth_date.id_for_label }}"
+                                   name="{{ form.birth_date.name }}"
+                                   value="{{ form.birth_date.value|default:'' }}">
+                            {% if form.birth_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.birth_date.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Address -->
+                        <div class="col-12">
+                            <label for="{{ form.address.id_for_label }}" class="form-label">
+                                <i class="bi bi-geo-alt me-1"></i>Manzil
+                            </label>
+                            <textarea class="form-control" 
+                                      id="{{ form.address.id_for_label }}"
+                                      name="{{ form.address.name }}"
+                                      rows="3"
+                                      placeholder="To'liq manzilni kiriting">{{ form.address.value|default:'' }}</textarea>
+                            {% if form.address.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.address.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Work Schedule -->
+                        <div class="col-12">
+                            <h6 class="mt-3 mb-3">
+                                <i class="bi bi-clock me-2"></i>Ish vaqti
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.shift_start.id_for_label }}" class="form-label">
+                                Ish boshlanish vaqti
+                            </label>
+                            <input type="time" 
+                                   class="form-control" 
+                                   id="{{ form.shift_start.id_for_label }}"
+                                   name="{{ form.shift_start.name }}"
+                                   value="{{ form.shift_start.value|default:'' }}">
+                            {% if form.shift_start.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.shift_start.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.shift_end.id_for_label }}" class="form-label">
+                                Ish tugash vaqti
+                            </label>
+                            <input type="time" 
+                                   class="form-control" 
+                                   id="{{ form.shift_end.id_for_label }}"
+                                   name="{{ form.shift_end.name }}"
+                                   value="{{ form.shift_end.value|default:'' }}">
+                            {% if form.shift_end.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.shift_end.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-1"></i>Saqlash
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Additional Information -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-info-circle me-2"></i>Ma'lumot
+                </h6>
+                <ul class="list-unstyled mb-0 small text-muted">
+                    <li><i class="bi bi-check me-1"></i>Profil rasmi avtomatik ravishda o'lchamlanadi</li>
+                    <li><i class="bi bi-check me-1"></i>Barcha maydonlar ixtiyoriy</li>
+                    <li><i class="bi bi-check me-1"></i>Ma'lumotlaringiz xavfsiz saqlanadi</li>
+                    <li><i class="bi bi-check me-1"></i>Telefon raqamini to'g'ri formatda kiriting</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const currentPhoto = document.getElementById('current-photo');
+            if (currentPhoto.tagName === 'IMG') {
+                currentPhoto.src = e.target.result;
+            } else {
+                // Replace div with img element
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.alt = 'Preview';
+                img.className = 'rounded-circle border';
+                img.id = 'current-photo';
+                img.style.width = '120px';
+                img.style.height = '120px';
+                img.style.objectFit = 'cover';
+                currentPhoto.parentNode.replaceChild(img, currentPhoto);
+            }
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const phoneInput = document.querySelector('input[name="phone_number"]');
+    const shiftStart = document.querySelector('input[name="shift_start"]');
+    const shiftEnd = document.querySelector('input[name="shift_end"]');
+    
+    // Phone number validation
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function() {
+            const value = this.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                const formatted = value.replace(/(\d{3})(\d{2})(\d{3})(\d{2})(\d{2})/, '+$1 $2 $3 $4 $5');
+                this.value = formatted;
+            }
+        });
+    }
+    
+    // Work schedule validation
+    form.addEventListener('submit', function(e) {
+        if (shiftStart.value && shiftEnd.value) {
+            const start = new Date('2000-01-01 ' + shiftStart.value);
+            const end = new Date('2000-01-01 ' + shiftEnd.value);
+            
+            if (start >= end) {
+                e.preventDefault();
+                alert('Ish tugash vaqti boshlanish vaqtidan keyin bo\'lishi kerak!');
+                shiftEnd.focus();
+            }
+        }
+    });
+});
+</script>
+
+<style>
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #5a67d8, #6b46c1);
+        transform: translateY(-1px);
+    }
+    
+    #current-photo {
+        transition: all 0.3s ease;
+    }
+    
+    #current-photo:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}

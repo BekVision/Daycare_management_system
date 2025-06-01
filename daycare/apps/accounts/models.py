@@ -62,7 +62,10 @@ class CustomUser(AbstractUser):
     role = models.ForeignKey(
         Role,
         on_delete=models.PROTECT,
-        verbose_name="Rol"
+        verbose_name="Rol",
+        default='admin',
+        # null = True,
+        # blank = True,
     )
 
     USERNAME_FIELD = 'username'

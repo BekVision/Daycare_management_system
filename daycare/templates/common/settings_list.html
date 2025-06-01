@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block title %}Tizim sozlamalari{% endblock %}
+{% block page_title %}Tizim sozlamalari{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Tizim sozlamalari</h3>
+        <p class="text-muted mb-0">Dastur sozlamalarini boshqaring</p>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Qidiruv</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search }}"
+                           placeholder="Kalit so'z yoki tavsif bo'yicha qidiring">
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="data_type" class="form-label">Ma'lumot turi</label>
+                <select class="form-select" id="data_type" name="data_type">
+                    <option value="">Barcha turlar</option>
+                    {% for type_key, type_name in data_types %}
+                        <option value="{{ type_key }}" {% if data_type == type_key %}selected{% endif %}>
+                            {{ type_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                    <a href="{% url 'common:settings_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Settings Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-gear me-2"></i>
+            Jami: {{ settings|length }} ta sozlama
+        </h5>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if settings %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0">Kalit</th>
+                            <th class="border-0">Qiymat</th>
+                            <th class="border-0">Tur</th>
+                            <th class="border-0">Tahrirlash mumkin</th>
+                            <th class="border-0">Yangilangan</th>
+                            <th class="border-0 text-center">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for setting in settings %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ setting.key }}</div>
+                                {% if setting.description %}
+                                <small class="text-muted">{{ setting.description|truncatechars:50 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="setting-value">
+                                    {% if setting.data_type == 'BOOLEAN' %}
+                                        {% if setting.get_typed_value %}
+                                            <span class="badge bg-success">Ha</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Yo'q</span>
+                                        {% endif %}
+                                    {% elif setting.data_type == 'JSON' %}
+                                        <code class="small">{{ setting.value|truncatechars:30 }}</code>
+                                    {% else %}
+                                        {{ setting.value|truncatechars:50 }}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if setting.data_type == 'STRING' %}primary{% elif setting.data_type == 'INTEGER' %}info{% elif setting.data_type == 'FLOAT' %}warning{% elif setting.data_type == 'BOOLEAN' %}success{% else %}secondary{% endif %}">
+                                    {{ setting.get_data_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if setting.is_editable %}
+                                    <span class="text-success">
+                                        <i class="bi bi-check-circle me-1"></i>Ha
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="bi bi-lock me-1"></i>Yo'q
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    {{ setting.updated_at|timesince }} oldin
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                {% if setting.is_editable %}
+                                    <a href="{% url 'common:settings_edit' setting.id %}" 
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Tahrirlash">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Tahrirlash mumkin emas">
+                                        <i class="bi bi-lock"></i>
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-gear text-muted" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-muted">Sozlama topilmadi</h5>
+                <p class="text-muted">Qidiruv shartlaringizni o'zgartiring</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Cards -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card border-0 bg-primary bg-opacity-10">
+            <div class="card-body text-center">
+                <h5 class="text-primary">{{ settings|length }}</h5>
+                <small class="text-muted">Jami sozlamalar</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 bg-success bg-opacity-10">
+            <div class="card-body text-center">
+                <h5 class="text-success">
+                    {% with editable_count=settings|length %}
+                        {% for setting in settings %}
+                            {% if setting.is_editable %}{{ forloop.counter }}{% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                </h5>
+                <small class="text-muted">Tahrirlash mumkin</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 bg-warning bg-opacity-10">
+            <div class="card-body text-center">
+                <h5 class="text-warning">
+                    {% with readonly_count=0 %}
+                        {% for setting in settings %}
+                            {% if not setting.is_editable %}{{ forloop.counter }}{% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                </h5>
+                <small class="text-muted">Faqat o'qish</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 bg-info bg-opacity-10">
+            <div class="card-body text-center">
+                <h5 class="text-info">
+                    {% regroup settings by data_type as type_groups %}
+                    {{ type_groups|length }}
+                </h5>
+                <small class="text-muted">Turlar soni</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .setting-value {
+        max-width: 200px;
+        word-wrap: break-word;
+    }
+    
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+    
+    code {
+        font-size: 0.85rem;
+        background-color: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+</style>
+
+<script>
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const dataTypeSelect = document.getElementById('data_type');
+    dataTypeSelect.addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+{% endblock %}

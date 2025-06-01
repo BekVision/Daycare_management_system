@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+
+{% block title %}Faoliyat detali - {{ log.get_action_display }}{% endblock %}
+{% block page_title %}Faoliyat detali{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Faoliyat detali
+                    </h5>
+                    <a href="{% url 'common:activity_logs' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Main Info -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light border-0">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary mb-3">
+                                    <i class="bi bi-person me-1"></i>Foydalanuvchi ma'lumotlari
+                                </h6>
+                                
+                                <div class="d-flex align-items-center mb-3">
+                                    {% if log.user.profile.photo %}
+                                        <img src="{{ log.user.profile.photo.url }}" 
+                                             alt="{{ log.user.get_full_name }}" 
+                                             class="rounded-circle me-3"
+                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"
+                                             style="width: 50px; height: 50px;">
+                                            <i class="bi bi-person text-primary"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold">{{ log.user.get_full_name }}</div>
+                                        <small class="text-muted">{{ log.user.username }}</small>
+                                        <div class="small">
+                                            <span class="badge bg-{% if log.user.role.name == 'admin' %}primary{% elif log.user.role.name == 'manager' %}success{% else %}warning{% endif %}">
+                                                {{ log.user.role.get_name_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <strong class="small">Email:</strong>
+                                        <div class="small text-muted">{{ log.user.email }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong class="small">Telefon:</strong>
+                                        <div class="small text-muted">
+                                            {{ log.user.profile.phone_number|default:"Kiritilmagan" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card bg-light border-0">
+                            <div class="card-body">
+                                <h6 class="card-title text-success mb-3">
+                                    <i class="bi bi-activity me-1"></i>Amal ma'lumotlari
+                                </h6>
+                                
+                                <div class="mb-3">
+                                    <span class="badge bg-{% if 'LOGIN' in log.action %}success{% elif 'LOGOUT' in log.action %}secondary{% elif 'CREATED' in log.action %}primary{% elif 'UPDATED' in log.action %}warning{% elif 'DELETED' in log.action %}danger{% else %}info{% endif %} fs-6 px-3 py-2">
+                                        {{ log.get_action_display }}
+                                    </span>
+                                </div>
+                                
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <strong class="small">Ob'ekt turi:</strong>
+                                        <div class="small text-muted">{{ log.object_type }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong class="small">Ob'ekt ID:</strong>
+                                        <div class="small text-muted">{{ log.object_id|default:"N/A" }}</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <strong class="small">Ob'ekt nomi:</strong>
+                                        <div class="small text-muted">{{ log.object_repr|default:"N/A" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Technical Info -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-info bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-info mb-3">
+                                    <i class="bi bi-clock me-1"></i>Vaqt ma'lumotlari
+                                </h6>
+                                
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <strong class="small">Sana va vaqt:</strong>
+                                        <div class="fw-bold">{{ log.timestamp|date:"d F Y, H:i:s" }}</div>
+                                        <small class="text-muted">{{ log.timestamp|timesince }} oldin</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-warning bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-warning mb-3">
+                                    <i class="bi bi-globe me-1"></i>Texnik ma'lumotlar
+                                </h6>
+                                
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <strong class="small">IP Address:</strong>
+                                        <div class="small">
+                                            {% if log.ip_address %}
+                                                <code>{{ log.ip_address }}</code>
+                                            {% else %}
+                                                <span class="text-muted">Noma'lum</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Agent -->
+                {% if log.user_agent %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 bg-secondary bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-secondary mb-3">
+                                    <i class="bi bi-browser-chrome me-1"></i>Brauzer ma'lumotlari
+                                </h6>
+                                <div class="font-monospace small p-2 bg-white rounded border">
+                                    {{ log.user_agent }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Changes -->
+                {% if log.changes %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 bg-danger bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-danger mb-3">
+                                    <i class="bi bi-file-diff me-1"></i>O'zgarishlar
+                                </h6>
+                                <div class="bg-white rounded border p-3">
+                                    <pre class="mb-0 small"><code>{{ log.changes|pprint }}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Related Objects -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-link me-1"></i>Bog'liq ma'lumotlar
+                                </h6>
+                                
+                                <div class="row g-3">
+                                    <!-- Quick Actions -->
+                                    <div class="col-md-6">
+                                        <h6 class="small fw-bold text-primary">Tezkor amallar</h6>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% if log.object_type == 'User' and log.object_id %}
+                                                <a href="#" class="btn btn-sm btn-outline-primary" 
+                                                   onclick="alert('Bu funksiya hali ishlab chiqilmagan')">
+                                                    <i class="bi bi-person me-1"></i>Foydalanuvchini ko'rish
+                                                </a>
+                                            {% endif %}
+                                            
+                                            <a href="{% url 'common:activity_logs' %}?user={{ log.user.id }}" 
+                                               class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-list me-1"></i>Bu foydalanuvchi loglari
+                                            </a>
+                                            
+                                            <a href="{% url 'common:activity_logs' %}?action={{ log.action }}" 
+                                               class="btn btn-sm btn-outline-warning">
+                                                <i class="bi bi-filter me-1"></i>Shu turdagi amallar
+                                            </a>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Log Context -->
+                                    <div class="col-md-6">
+                                        <h6 class="small fw-bold text-secondary">Log konteksti</h6>
+                                        <ul class="list-unstyled small text-muted">
+                                            <li>
+                                                <i class="bi bi-hash me-1"></i>
+                                                Log ID: <strong>{{ log.id }}</strong>
+                                            </li>
+                                            <li>
+                                                <i class="bi bi-calendar me-1"></i>
+                                                Hafta kuni: <strong>{{ log.timestamp|date:"l" }}</strong>
+                                            </li>
+                                            <li>
+                                                <i class="bi bi-clock me-1"></i>
+                                                Soat: <strong>{{ log.timestamp|time:"H:i" }}</strong>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .font-monospace {
+        font-family: 'Courier New', Courier, monospace;
+    }
+    
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    code {
+        background-color: transparent;
+        padding: 0;
+        color: #495057;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-1px);
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+    
+    .btn-sm {
+        font-size: 0.775rem;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Copy IP address to clipboard
+    const ipCode = document.querySelector('code');
+    if (ipCode) {
+        ipCode.style.cursor = 'pointer';
+        ipCode.title = 'Nusxalash uchun bosing';
+        ipCode.addEventListener('click', function() {
+            navigator.clipboard.writeText(this.textContent).then(function() {
+                // Show temporary notification
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-success position-fixed';
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.zIndex = '9999';
+                notification.innerHTML = '<i class="bi bi-check me-1"></i>IP nusxalandi!';
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 2000);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

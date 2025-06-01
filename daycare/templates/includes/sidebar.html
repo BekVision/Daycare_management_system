@@ -1,0 +1,274 @@
+<!-- Sidebar -->
+<div class="col-md-3 col-lg-2 sidebar p-0 d-md-block collapse" id="sidebarMenu">
+    <div class="p-3">
+        <h5 class="text-white mb-4">
+            <i class="bi bi-house-gear me-2"></i>
+            Bog'cha Tizimi
+        </h5>
+
+        <!-- User Info -->
+        <div class="mb-3 p-3 rounded" style="background-color: rgba(255, 255, 255, 0.1);">
+            <div class="d-flex align-items-center mb-2">
+                {% if user.profile.photo %}
+                    <img src="{{ user.profile.photo.url }}"
+                         alt="{{ user.get_full_name }}"
+                         class="rounded-circle me-2"
+                         style="width: 35px; height: 35px; object-fit: cover;">
+                {% else %}
+                    <div class="bg-white bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center me-2"
+                         style="width: 35px; height: 35px;">
+                        <i class="bi bi-person text-white"></i>
+                    </div>
+                {% endif %}
+                <div>
+                    <div class="text-white fw-bold small">{{ user.get_full_name }}</div>
+                    <small class="text-white-50">{{ user.role.get_name_display }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+               href="{% url 'accounts:dashboard' %}">
+                <i class="bi bi-speedometer2 me-2"></i>Bosh sahifa
+            </a>
+
+            {% if user.is_manager or user.is_admin %}
+            <!-- Inventory Section -->
+            <div class="nav-section mt-3">
+                <small class="text-white-50 text-uppercase px-3 mb-2 d-block">Ombor</small>
+
+                <a class="nav-link" href="#inventory" data-bs-toggle="collapse" aria-expanded="false">
+                    <i class="bi bi-box-seam me-2"></i>Inventar boshqaruvi
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse ms-3" id="inventory">
+                    <a class="nav-link py-1 {% if '/inventory/' in request.path and '/categories/' not in request.path and '/stock/' not in request.path and '/transactions/' not in request.path %}active{% endif %}" href="/inventory/">
+                        <i class="bi bi-list-ul me-2"></i>Mahsulotlar
+                    </a>
+                    <a class="nav-link py-1 {% if '/inventory/categories/' in request.path %}active{% endif %}" href="/inventory/categories/">
+                        <i class="bi bi-tags me-2"></i>Kategoriyalar
+                    </a>
+                    <a class="nav-link py-1 {% if '/inventory/stock/' in request.path %}active{% endif %}" href="/inventory/stock/">
+                        <i class="bi bi-boxes me-2"></i>Zaxira
+                    </a>
+                    <a class="nav-link py-1 {% if '/inventory/transactions/' in request.path %}active{% endif %}" href="/inventory/transactions/">
+                        <i class="bi bi-arrow-left-right me-2"></i>Tranzaksiyalar
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Meals Section -->
+            <div class="nav-section mt-3">
+                <small class="text-white-50 text-uppercase px-3 mb-2 d-block">Ovqatlar</small>
+
+                <a class="nav-link" href="#meals" data-bs-toggle="collapse" aria-expanded="false">
+                    <i class="bi bi-cup-hot me-2"></i>Ovqat boshqaruvi
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse ms-3" id="meals">
+                    <a class="nav-link py-1 {% if '/meals/' in request.path and '/categories/' not in request.path and '/recipes/' not in request.path %}active{% endif %}" href="/meals/">
+                        <i class="bi bi-list-ul me-2"></i>Ovqat ro'yxati
+                    </a>
+                    <a class="nav-link py-1 {% if '/meals/categories/' in request.path %}active{% endif %}" href="/meals/categories/">
+                        <i class="bi bi-tags me-2"></i>Kategoriyalar
+                    </a>
+                    {% if user.is_manager or user.is_admin %}
+                    <a class="nav-link py-1 {% if '/meals/recipes/' in request.path %}active{% endif %}" href="/meals/recipes/">
+                        <i class="bi bi-journal-text me-2"></i>Retseptlar
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if user.is_chef or user.is_manager or user.is_admin %}
+                <!-- Meal Service Section -->
+                <a class="nav-link" href="#meal-service" data-bs-toggle="collapse" aria-expanded="false">
+                    <i class="bi bi-hand-thumbs-up me-2"></i>Ovqat xizmatlari
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse ms-3" id="meal-service">
+                    <a class="nav-link py-1 {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}"
+                       href="{% url 'meal_service:service_list' %}">
+                        <i class="bi bi-list-ul me-2"></i>Xizmatlar ro'yxati
+                    </a>
+                    {% if user.is_chef or user.is_admin %}
+                    <a class="nav-link py-1 {% if request.resolver_match.url_name == 'service_create' %}active{% endif %}"
+                       href="{% url 'meal_service:service_create' %}">
+                        <i class="bi bi-plus-circle me-2"></i>Yangi xizmat
+                    </a>
+                    {% endif %}
+                    <a class="nav-link py-1 {% if request.resolver_match.url_name == 'daily_services' %}active{% endif %}"
+                       href="{% url 'meal_service:daily_services' %}">
+                        <i class="bi bi-calendar-day me-2"></i>Bugungi xizmatlar
+                    </a>
+                    {% if user.is_manager or user.is_admin %}
+                    <a class="nav-link py-1 {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}"
+                       href="{% url 'meal_service:analytics' %}">
+                        <i class="bi bi-graph-up me-2"></i>Tahlillar
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            {% if user.is_manager or user.is_admin %}
+            <!-- Reports Section -->
+            <div class="nav-section mt-3">
+                <small class="text-white-50 text-uppercase px-3 mb-2 d-block">Tahlil</small>
+
+                <a class="nav-link" href="#reports" data-bs-toggle="collapse" aria-expanded="false">
+                    <i class="bi bi-graph-up me-2"></i>Hisobotlar
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse ms-3" id="reports">
+                    <a class="nav-link py-1 {% if '/reports/daily/' in request.path %}active{% endif %}" href="/reports/daily/">
+                        <i class="bi bi-calendar-day me-2"></i>Kunlik
+                    </a>
+                    <a class="nav-link py-1 {% if '/reports/monthly/' in request.path %}active{% endif %}" href="/reports/monthly/">
+                        <i class="bi bi-calendar-month me-2"></i>Oylik
+                    </a>
+                    <a class="nav-link py-1 {% if '/reports/' in request.path %}active{% endif %}" href="/reports/">
+                        <i class="bi bi-speedometer me-2"></i>General
+                    </a>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <a class="nav-link {% if '/notifications/' in request.path %}active{% endif %}" href="/notifications/">
+                <i class="bi bi-bell me-2"></i>Bildirishnomalar
+                <span class="badge bg-danger ms-auto" id="notification-count" style="display: none;">0</span>
+            </a>
+            {% endif %}
+
+            {% if user.is_admin %}
+            <!-- Admin Section -->
+            <div class="nav-section mt-3">
+                <small class="text-white-50 text-uppercase px-3 mb-2 d-block">Boshqaruv</small>
+
+                <a class="nav-link {% if '/accounts/users/' in request.path %}active{% endif %}" href="{% url 'accounts:user_list' %}">
+                    <i class="bi bi-people me-2"></i>Foydalanuvchilar
+                </a>
+
+                <a class="nav-link" href="#admin" data-bs-toggle="collapse" aria-expanded="false">
+                    <i class="bi bi-gear me-2"></i>Tizim
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse ms-3" id="admin">
+                    <a class="nav-link py-1" href="/admin/" target="_blank">
+                        <i class="bi bi-tools me-2"></i>Admin panel
+                    </a>
+                    <a class="nav-link py-1 {% if '/common/settings/' in request.path %}active{% endif %}" href="/common/settings/">
+                        <i class="bi bi-sliders me-2"></i>Sozlamalar
+                    </a>
+                    <a class="nav-link py-1 {% if '/common/health/' in request.path %}active{% endif %}" href="/common/health/">
+                        <i class="bi bi-heart-pulse me-2"></i>Tizim holati
+                    </a>
+                    <a class="nav-link py-1 {% if '/common/logs/' in request.path %}active{% endif %}" href="/common/logs/">
+                        <i class="bi bi-journal-text me-2"></i>Loglar
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- User Actions -->
+            <hr class="text-white-50 my-3">
+
+            <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+               href="{% url 'accounts:profile' %}">
+                <i class="bi bi-person me-2"></i>Profil
+            </a>
+
+            <a class="nav-link" href="{% url 'accounts:logout' %}"
+               onclick="return confirm('Rostdan ham chiqmoqchimisiz?')">
+                <i class="bi bi-box-arrow-right me-2"></i>Chiqish
+            </a>
+        </nav>
+    </div>
+</div>
+
+<script>
+// Sidebar active states
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-expand active sections
+    const activeLinks = document.querySelectorAll('.nav-link.active');
+    activeLinks.forEach(function(link) {
+        const parentCollapse = link.closest('.collapse');
+        if (parentCollapse) {
+            const bsCollapse = new bootstrap.Collapse(parentCollapse, {
+                show: true
+            });
+        }
+    });
+
+    // Auto-expand meal service section if on meal service pages
+    if (window.location.pathname.includes('/meal_service/')) {
+        const mealServiceCollapse = document.getElementById('meal-service');
+        if (mealServiceCollapse) {
+            const bsCollapse = new bootstrap.Collapse(mealServiceCollapse, {
+                show: true
+            });
+        }
+    }
+
+    // Notification count (if available)
+    // fetch('/api/notifications/unread-count/')
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         const badge = document.getElementById('notification-count');
+    //         if (data.count > 0) {
+    //             badge.textContent = data.count > 99 ? '99+' : data.count;
+    //             badge.style.display = 'inline-block';
+    //         }
+    //     })
+    //     .catch(error => {
+    //         console.log('Notification count fetch failed:', error);
+    //     });
+});
+</script>
+
+<style>
+.nav-section {
+    margin-bottom: 1rem;
+}
+
+.nav-section small {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.sidebar .nav-link {
+    transition: all 0.3s ease;
+    border-radius: 0.375rem;
+    margin: 0.1rem 0;
+}
+
+.sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: translateX(2px);
+}
+
+.sidebar .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+}
+
+.sidebar .nav-link i {
+    width: 1.2rem;
+    text-align: center;
+}
+
+.collapse .nav-link {
+    font-size: 0.9rem;
+    padding-left: 2.5rem;
+}
+
+#notification-count {
+    font-size: 0.7rem;
+    min-width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+}
+</style>

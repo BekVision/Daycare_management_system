@@ -1,295 +1,438 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}{{ title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .form-section {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-    .form-section h6 {
-        color: #495057;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-    .required-field::after {
-        content: ' *';
-        color: #dc3545;
-    }
-</style>
-{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">{{ title }}</h1>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item">
-                                <a href="{% url 'inventory:dashboard' %}">Inventory</a>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <a href="{% url 'inventory:ingredient_list' %}">Ingredientlar</a>
-                            </li>
-                            <li class="breadcrumb-item active">{{ title }}</li>
-                        </ol>
-                    </nav>
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-{% if ingredient %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>{{ title }}
+                    </h5>
+                    <a href="{% if ingredient %}{% url 'inventory:ingredient_detail' ingredient.id %}{% else %}{% url 'inventory:ingredient_list' %}{% endif %}" 
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
                 </div>
-                <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Orqaga
-                </a>
             </div>
-        </div>
-    </div>
-
-    <div class="row justify-content-center">
-        <div class="col-xl-8 col-lg-10">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
+            
+            <div class="card-body">
+                <form method="post" id="ingredientForm">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-info-circle me-1"></i>Asosiy ma'lumotlar
+                            </h6>
+                        </div>
                         
-                        <!-- Basic Information -->
-                        <div class="form-section">
-                            <h6><i class="bi bi-info-circle"></i> Asosiy Ma'lumotlar</h6>
-                            
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="mb-3">
-                                        <label for="{{ form.name.id_for_label }}" class="form-label required-field">
-                                            {{ form.name.label }}
-                                        </label>
-                                        {{ form.name }}
-                                        {% if form.name.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.name.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                        {% if form.name.help_text %}
-                                            <div class="form-text">{{ form.name.help_text }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="{{ form.unit.id_for_label }}" class="form-label required-field">
-                                            {{ form.unit.label }}
-                                        </label>
-                                        {{ form.unit }}
-                                        {% if form.unit.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.unit.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.category.id_for_label }}" class="form-label required-field">
-                                            {{ form.category.label }}
-                                        </label>
-                                        {{ form.category }}
-                                        {% if form.category.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.category.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.barcode.id_for_label }}" class="form-label">
-                                            {{ form.barcode.label }}
-                                        </label>
-                                        {{ form.barcode }}
-                                        {% if form.barcode.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.barcode.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="{{ form.description.id_for_label }}" class="form-label">
-                                    {{ form.description.label }}
-                                </label>
-                                {{ form.description }}
-                                {% if form.description.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.description.errors.0 }}
-                                    </div>
-                                {% endif %}
+                        <div class="col-md-8">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                <i class="bi bi-tag me-1"></i>Ingredient nomi <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.unit.id_for_label }}" class="form-label">
+                                <i class="bi bi-rulers me-1"></i>Birlik <span class="text-danger">*</span>
+                            </label>
+                            {{ form.unit }}
+                            {% if form.unit.errors %}
+                                <div class="text-danger small mt-1">{{ form.unit.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Masalan: kg, litr, dona, paket</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                <i class="bi bi-collection me-1"></i>Kategoriya <span class="text-danger">*</span>
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.barcode.id_for_label }}" class="form-label">
+                                <i class="bi bi-upc-scan me-1"></i>Barcode
+                            </label>
+                            {{ form.barcode }}
+                            {% if form.barcode.errors %}
+                                <div class="text-danger small mt-1">{{ form.barcode.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Shtrix kod (ixtiyoriy)</div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <i class="bi bi-text-left me-1"></i>Tavsif
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Stock Settings -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="bi bi-speedometer me-1"></i>Zaxira sozlamalari
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.min_threshold.id_for_label }}" class="form-label">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Minimal chegara <span class="text-danger">*</span>
+                            </label>
+                            {{ form.min_threshold }}
+                            {% if form.min_threshold.errors %}
+                                <div class="text-danger small mt-1">{{ form.min_threshold.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Bu miqdordan kam bo'lganda ogohlantirish</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.max_threshold.id_for_label }}" class="form-label">
+                                <i class="bi bi-check-circle me-1"></i>Maksimal chegara
+                            </label>
+                            {{ form.max_threshold }}
+                            {% if form.max_threshold.errors %}
+                                <div class="text-danger small mt-1">{{ form.max_threshold.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Maksimal saqlash miqdori (ixtiyoriy)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Financial Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">
+                                <i class="bi bi-currency-dollar me-1"></i>Moliyaviy ma'lumotlar
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.cost_per_unit.id_for_label }}" class="form-label">
+                                <i class="bi bi-cash me-1"></i>Birlik narxi (so'm)
+                            </label>
+                            {{ form.cost_per_unit }}
+                            {% if form.cost_per_unit.errors %}
+                                <div class="text-danger small mt-1">{{ form.cost_per_unit.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Har bir birlik uchun narx</div>
+                        </div>
+                        
+                        {% if ingredient and ingredient.cost_per_unit %}
+                        <div class="col-md-6">
+                            <label class="form-label">Joriy qiymat</label>
+                            <div class="form-control-plaintext">
+                                <strong class="text-primary">
+                                    {% widthratio ingredient.cost_per_unit 1 ingredient.available_quantity %} so'm
+                                </strong>
+                                <div class="form-text">Mavjud zaxira qiymati</div>
                             </div>
                         </div>
-
-                        <!-- Stock Settings -->
-                        <div class="form-section">
-                            <h6><i class="bi bi-stack"></i> Zaxira Sozlamalari</h6>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.min_threshold.id_for_label }}" class="form-label required-field">
-                                            {{ form.min_threshold.label }}
-                                        </label>
-                                        {{ form.min_threshold }}
-                                        {% if form.min_threshold.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.min_threshold.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                        <div class="form-text">
-                                            Zaxira bu miqdordan kam bo'lganda ogohlantirish beriladi
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.max_threshold.id_for_label }}" class="form-label">
-                                            {{ form.max_threshold.label }}
-                                        </label>
-                                        {{ form.max_threshold }}
-                                        {% if form.max_threshold.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.max_threshold.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                        <div class="form-text">
-                                            Maksimal saqlash miqdori (ixtiyoriy)
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Financial Information -->
-                        <div class="form-section">
-                            <h6><i class="bi bi-currency-dollar"></i> Moliyaviy Ma'lumotlar</h6>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.cost_per_unit.id_for_label }}" class="form-label">
-                                            {{ form.cost_per_unit.label }}
-                                        </label>
-                                        <div class="input-group">
-                                            {{ form.cost_per_unit }}
-                                            <span class="input-group-text">so'm</span>
-                                        </div>
-                                        {% if form.cost_per_unit.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.cost_per_unit.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                        <div class="form-text">
-                                            Bir birlik uchun taxminiy narx
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <div class="form-check form-switch mt-4">
-                                            {{ form.is_active }}
-                                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                                {{ form.is_active.label }}
-                                            </label>
-                                        </div>
-                                        {% if form.is_active.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ form.is_active.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                        <div class="form-text">
-                                            Faol bo'lmagan ingredientlar ro'yxatda ko'rinmaydi
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Errors -->
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                <h6 class="alert-heading">Xatoliklar:</h6>
-                                {{ form.non_field_errors }}
-                            </div>
                         {% endif %}
-
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-x-circle"></i> Bekor qilish
-                                </a>
+                    </div>
+                    
+                    <!-- Settings -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <h6 class="text-info border-bottom pb-2">
+                                <i class="bi bi-gear me-1"></i>Sozlamalar
+                            </h6>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    <i class="bi bi-power me-1"></i>Faol holat
+                                </label>
+                                <div class="form-text">Nofaol ingredientlar ro'yxatlarda ko'rsatilmaydi</div>
                             </div>
-                            <div>
-                                <button type="submit" class="btn btn-primary px-4">
-                                    <i class="bi bi-check-circle"></i> 
-                                    {% if ingredient %}Yangilash{% else %}Saqlash{% endif %}
+                            {% if form.is_active.errors %}
+                                <div class="text-danger small mt-1">{{ form.is_active.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Form Validation Errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% if ingredient %}{% url 'inventory:ingredient_detail' ingredient.id %}{% else %}{% url 'inventory:ingredient_list' %}{% endif %}" 
+                                   class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    {% if ingredient %}Yangilash{% else %}Yaratish{% endif %}
                                 </button>
                             </div>
                         </div>
-                    </form>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Information -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-question-circle me-2"></i>Yordam
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="small fw-bold">Birlik turlari:</h6>
+                        <ul class="list-unstyled small text-muted mb-3">
+                            <li><strong>Og'irlik:</strong> kg, g, tonna</li>
+                            <li><strong>Hajm:</strong> litr, ml, sm³</li>
+                            <li><strong>Dona:</strong> dona, paket, quti</li>
+                            <li><strong>Masofa:</strong> m, sm, mm</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="small fw-bold">Chegaralar:</h6>
+                        <ul class="list-unstyled small text-muted">
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Minimal chegara majburiy</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Maksimal chegara ixtiyoriy</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Ogohlantirish avtomatik yuboriladi</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Barcode noyob bo'lishi kerak</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Form validation styling
-    const form = document.querySelector('form');
-    const inputs = form.querySelectorAll('input, select, textarea');
+    const form = document.getElementById('ingredientForm');
+    const nameField = document.querySelector('[name="name"]');
+    const unitField = document.querySelector('[name="unit"]');
+    const categoryField = document.querySelector('[name="category"]');
+    const minThresholdField = document.querySelector('[name="min_threshold"]');
+    const maxThresholdField = document.querySelector('[name="max_threshold"]');
+    const costField = document.querySelector('[name="cost_per_unit"]');
+    const barcodeField = document.querySelector('[name="barcode"]');
     
-    inputs.forEach(input => {
-        input.addEventListener('invalid', function() {
+    // Real-time validation
+    nameField.addEventListener('input', function() {
+        if (this.value.length < 2) {
             this.classList.add('is-invalid');
-        });
+        } else {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        }
+    });
+    
+    // Unit suggestions
+    unitField.addEventListener('input', function() {
+        const suggestions = ['kg', 'g', 'litr', 'ml', 'dona', 'paket', 'quti', 'm', 'sm'];
+        // Simple autocomplete logic can be added here
+    });
+    
+    // Threshold validation
+    function validateThresholds() {
+        const minVal = parseFloat(minThresholdField.value) || 0;
+        const maxVal = parseFloat(maxThresholdField.value) || 0;
         
-        input.addEventListener('input', function() {
-            if (this.checkValidity()) {
-                this.classList.remove('is-invalid');
-                this.classList.add('is-valid');
+        if (maxVal > 0 && minVal > maxVal) {
+            maxThresholdField.classList.add('is-invalid');
+            minThresholdField.classList.add('is-invalid');
+            return false;
+        } else {
+            maxThresholdField.classList.remove('is-invalid');
+            minThresholdField.classList.remove('is-invalid');
+            return true;
+        }
+    }
+    
+    minThresholdField.addEventListener('input', validateThresholds);
+    maxThresholdField.addEventListener('input', validateThresholds);
+    
+    // Cost formatting
+    costField.addEventListener('blur', function() {
+        if (this.value) {
+            const value = parseFloat(this.value);
+            if (!isNaN(value)) {
+                this.value = value.toFixed(2);
             }
+        }
+    });
+    
+    // Barcode validation
+    barcodeField.addEventListener('input', function() {
+        const barcode = this.value.trim();
+        if (barcode && (!/^\d+$/.test(barcode) || barcode.length < 8)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+            if (barcode) this.classList.add('is-valid');
+        }
+    });
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check required fields
+        if (!nameField.value.trim()) {
+            nameField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!unitField.value.trim()) {
+            unitField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!categoryField.value) {
+            categoryField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!minThresholdField.value || parseFloat(minThresholdField.value) < 0) {
+            minThresholdField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        // Check threshold relationship
+        if (!validateThresholds()) {
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            
+            // Show error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+            errorDiv.innerHTML = `
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Iltimos, barcha majburiy maydonlarni to'ldiring va xatolarni tuzating.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            form.insertBefore(errorDiv, form.firstChild);
+            
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        }
+    });
+    
+    // Auto-save draft (local storage)
+    const fields = [nameField, unitField, minThresholdField, maxThresholdField, costField, barcodeField];
+    fields.forEach(field => {
+        field.addEventListener('input', function() {
+            const draftKey = 'ingredient_draft_{{ ingredient.id|default:"new" }}';
+            const draft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+            draft[field.name] = field.value;
+            localStorage.setItem(draftKey, JSON.stringify(draft));
         });
     });
-
-    // Auto-calculate suggestions
-    const minThresholdInput = document.getElementById('{{ form.min_threshold.id_for_label }}');
-    const maxThresholdInput = document.getElementById('{{ form.max_threshold.id_for_label }}');
     
-    if (minThresholdInput && maxThresholdInput) {
-        minThresholdInput.addEventListener('input', function() {
-            const minValue = parseFloat(this.value);
-            if (minValue > 0 && !maxThresholdInput.value) {
-                // Suggest max threshold as 5x min threshold
-                maxThresholdInput.placeholder = `Tavsiya: ${(minValue * 5).toFixed(1)}`;
-            }
-        });
-    }
-
-    // Category quick add (if needed)
-    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
-    if (categorySelect) {
-        // Add option to create new category inline
-        // This would require additional AJAX functionality
-    }
+    // Load draft on page load
+    const draftKey = 'ingredient_draft_{{ ingredient.id|default:"new" }}';
+    const savedDraft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+    
+    {% if not ingredient %}
+    // Only load draft for new ingredients
+    Object.keys(savedDraft).forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field && !field.value) {
+            field.value = savedDraft[fieldName];
+        }
+    });
+    {% endif %}
+    
+    // Clear draft on successful submission
+    form.addEventListener('submit', function() {
+        if (this.checkValidity()) {
+            localStorage.removeItem(draftKey);
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + S: Save
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            form.submit();
+        }
+        
+        // Escape: Cancel
+        if (e.key === 'Escape') {
+            const cancelBtn = form.querySelector('a[href*="ingredient"]');
+            if (cancelBtn) cancelBtn.click();
+        }
+    });
 });
 </script>
+
+<style>
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .is-valid {
+        border-color: #198754;
+    }
+    
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #5a67d8, #6b46c1);
+        transform: translateY(-1px);
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .border-bottom {
+        border-bottom: 2px solid #e9ecef !important;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+</style>
 {% endblock %}

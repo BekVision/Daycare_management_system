@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+
+{% block title %}Ingredient ishlatish hisobotlari{% endblock %}
+
+{% block page_title %}Ingredient ishlatish hisobotlari{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Ingredient ishlatish hisobotlari</h4>
+        <p class="text-muted mb-0">Jami {{ total_reports }} ta hisobot</p>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download me-1"></i>Eksport
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportData('pdf')">
+                <i class="bi bi-file-pdf me-2"></i>PDF
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportData('excel')">
+                <i class="bi bi-file-excel me-2"></i>Excel
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportData('csv')">
+                <i class="bi bi-file-csv me-2"></i>CSV
+            </a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="{{ form.start_date.id_for_label }}" class="form-label">{{ form.start_date.label }}</label>
+                {{ form.start_date }}
+                {% if form.start_date.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.start_date.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ form.end_date.id_for_label }}" class="form-label">{{ form.end_date.label }}</label>
+                {{ form.end_date }}
+                {% if form.end_date.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.end_date.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ form.ingredient.id_for_label }}" class="form-label">{{ form.ingredient.label }}</label>
+                {{ form.ingredient }}
+                {% if form.ingredient.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.ingredient.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.category.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Filtrlash
+                    </button>
+                    {% if form.start_date.value or form.end_date.value or form.ingredient.value or form.category.value %}
+                    <a href="{% url 'reports:ingredient_usage_reports' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i>Tozalash
+                    </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-info" onclick="generateReports()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Yangi hisobotlar yaratish
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+{% if page_obj %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-primary">{{ total_reports }}</div>
+                <small class="text-muted">Jami hisobotlar</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-success">
+                    {% with page_obj|length as count %}{{ count }}{% endwith %}
+                </div>
+                <small class="text-muted">Filtrlangan natijalar</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-info">
+                    {% for report in page_obj %}
+                        {% if forloop.first %}{{ report.ingredient.category.name|default:"Barcha" }}{% endif %}
+                    {% empty %}
+                    -
+                    {% endfor %}
+                </div>
+                <small class="text-muted">Kategoriya</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-warning">
+                    {% for report in page_obj %}
+                        {% if forloop.first %}{{ report.report_date|date:"m.Y" }}{% endif %}
+                    {% empty %}
+                    -
+                    {% endfor %}
+                </div>
+                <small class="text-muted">So'nggi sana</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Reports Table -->
+{% if page_obj %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Sana</th>
+                        <th>Ingredient</th>
+                        <th>Kategoriya</th>
+                        <th>Ochilish zaxira</th>
+                        <th>Kirim</th>
+                        <th>Ishlatilgan</th>
+                        <th>Chiqindi</th>
+                        <th>Yopilish zaxira</th>
+                        <th>Ishlatish %</th>
+                        <th>Xarajat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in page_obj %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ report.report_date|date:"d.m.Y" }}</div>
+                            <small class="text-muted">{{ report.report_date|date:"l" }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ report.ingredient.name }}</div>
+                            <small class="text-muted">{{ report.ingredient.unit }}</small>
+                        </td>
+                        <td>
+                            {% if report.ingredient.category %}
+                            <span class="badge bg-light text-dark">{{ report.ingredient.category.name }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold">{{ report.opening_stock|floatformat:1 }}</div>
+                                <small class="text-muted">{{ report.ingredient.unit }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold text-success">{{ report.stock_in|floatformat:1 }}</div>
+                                <small class="text-muted">{{ report.ingredient.unit }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold text-primary">{{ report.stock_used|floatformat:1 }}</div>
+                                <small class="text-muted">{{ report.ingredient.unit }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold text-danger">{{ report.stock_waste|floatformat:1 }}</div>
+                                <small class="text-muted">{{ report.ingredient.unit }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold">{{ report.closing_stock|floatformat:1 }}</div>
+                                <small class="text-muted">{{ report.ingredient.unit }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if report.usage_percentage %}
+                            <div class="d-flex align-items-center">
+                                <span class="badge me-2
+                                    {% if report.usage_percentage < 70 %}bg-success
+                                    {% elif report.usage_percentage < 90 %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ report.usage_percentage|floatformat:1 }}%
+                                </span>
+                                <div class="progress flex-grow-1" style="height: 8px; width: 60px;">
+                                    <div class="progress-bar
+                                        {% if report.usage_percentage < 70 %}bg-success
+                                        {% elif report.usage_percentage < 90 %}bg-warning
+                                        {% else %}bg-danger{% endif %}"
+                                         style="width: {{ report.usage_percentage }}%"></div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if report.total_cost %}
+                            <div class="text-end">
+                                <div class="fw-bold">{{ report.total_cost|floatformat:0 }}</div>
+                                <small class="text-muted">so'm</small>
+                                {% if report.cost_per_unit %}
+                                <div class="mt-1">
+                                    <small class="text-muted">{{ report.cost_per_unit|floatformat:0 }} so'm/{{ report.ingredient.unit }}</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="5">Jami:</th>
+                        <th class="text-center">
+                            {% with page_obj as reports %}
+                            {% for report in reports %}
+                                {% if forloop.first %}
+                                    {% for r in reports %}{{ r.stock_used|add:0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                        </th>
+                        <th class="text-center">
+                            {% with page_obj as reports %}
+                            {% for report in reports %}
+                                {% if forloop.first %}
+                                    {% for r in reports %}{{ r.stock_waste|add:0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                        </th>
+                        <th colspan="2"></th>
+                        <th class="text-end">
+                            {% with page_obj as reports %}
+                            {% for report in reports %}
+                                {% if forloop.first %}
+                                    {% for r in reports %}{{ r.total_cost|add:0 }}{% if not forloop.last %}+{% endif %}{% endfor %} so'm
+                                {% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                        </th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-graph-up" style="font-size: 3rem; color: #dee2e6;"></i>
+        <h5 class="mt-3 text-muted">Ingredient ishlatish hisoboti topilmadi</h5>
+        {% if form.start_date.value or form.end_date.value or form.ingredient.value or form.category.value %}
+        <p class="text-muted">Filtrlangan qidiruv natijasi yo'q</p>
+        <a href="{% url 'reports:ingredient_usage_reports' %}" class="btn btn-outline-primary">
+            Barcha hisobotlar
+        </a>
+        {% else %}
+        <p class="text-muted">Hozircha ingredient ishlatish hisoboti yaratilmagan</p>
+        <button type="button" class="btn btn-primary" onclick="generateReports()">
+            <i class="bi bi-plus-circle me-1"></i>Hisobotlar yaratish
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Ingredient hisobotlari sahifalash" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if form.start_date.value %}&start_date={{ form.start_date.value }}{% endif %}{% if form.end_date.value %}&end_date={{ form.end_date.value }}{% endif %}{% if form.ingredient.value %}&ingredient={{ form.ingredient.value }}{% endif %}{% if form.category.value %}&category={{ form.category.value }}{% endif %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% if form.start_date.value %}&start_date={{ form.start_date.value }}{% endif %}{% if form.end_date.value %}&end_date={{ form.end_date.value }}{% endif %}{% if form.ingredient.value %}&ingredient={{ form.ingredient.value }}{% endif %}{% if form.category.value %}&category={{ form.category.value }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if form.start_date.value %}&start_date={{ form.start_date.value }}{% endif %}{% if form.end_date.value %}&end_date={{ form.end_date.value }}{% endif %}{% if form.ingredient.value %}&ingredient={{ form.ingredient.value }}{% endif %}{% if form.category.value %}&category={{ form.category.value }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Analytics Summary -->
+{% if page_obj %}
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Trending ingredientlar</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">Eng ko'p ishlatilgan</h6>
+                        <div class="list-group list-group-flush">
+                            {% for report in page_obj|slice:":3" %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="fw-bold">{{ report.ingredient.name }}</div>
+                                        <small class="text-muted">{{ report.stock_used|floatformat:1 }} {{ report.ingredient.unit }}</small>
+                                    </div>
+                                    <span class="badge bg-success">{{ report.usage_percentage|floatformat:1 }}%</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-danger">Eng ko'p chiqindi</h6>
+                        <div class="list-group list-group-flush">
+                            {% for report in page_obj|slice:":3" %}
+                            {% if report.stock_waste > 0 %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="fw-bold">{{ report.ingredient.name }}</div>
+                                        <small class="text-muted">{{ report.stock_waste|floatformat:1 }} {{ report.ingredient.unit }}</small>
+                                    </div>
+                                    <span class="badge bg-danger">
+                                        {% if report.stock_used > 0 %}
+                                        {{ report.stock_waste|div:report.stock_used|mul:100|floatformat:1 }}%
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Tezkor statistika</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="h5 text-success">85%</div>
+                        <small class="text-muted">O'rtacha ishlatish</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h5 text-warning">7%</div>
+                        <small class="text-muted">O'rtacha chiqindi</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h5 text-info">15</div>
+                        <small class="text-muted">Faol ingredientlar</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h5 text-primary">5</div>
+                        <small class="text-muted">Kategoriyalar</small>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <a href="{% url 'reports:dashboard' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function generateReports() {
+    if (confirm('Yangi ingredient ishlatish hisobotlarini yaratishni xohlaysizmi? Bu jarayon bir necha daqiqa vaqt olishi mumkin.')) {
+        // Generate reports functionality will be implemented here
+        alert('Hisobotlar yaratish funktsiyasi hozircha ishlab chiqilmoqda');
+    }
+}
+
+function exportData(format) {
+    // Export functionality will be implemented here
+    alert(`${format.toUpperCase()} formatida eksport qilish hozircha ishlab chiqilmoqda`);
+}
+
+// Auto-submit form on date change
+document.addEventListener('DOMContentLoaded', function() {
+    const startDate = document.querySelector('input[name="start_date"]');
+    const endDate = document.querySelector('input[name="end_date"]');
+
+    if (startDate && endDate) {
+        startDate.addEventListener('change', function() {
+            if (endDate.value && this.value) {
+                // Auto-submit could be enabled here
+                // document.querySelector('form').submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Bog'cha Ombor Tizimi{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ title }}</h5>
+                    <a href="{% url 'meal_service:service_detail' service.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Ovqat ma'lumotlari -->
+            <div class="card-body border-bottom">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                        <i class="bi bi-cup-hot text-primary"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">{{ service.meal.name }}</h6>
+                        <small class="text-muted">
+                            {{ service.service_date|date:"d F Y" }} • {{ service.service_time|time:"H:i" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post" id="feedbackForm">
+                <div class="card-body">
+                    {% csrf_token %}
+                    
+                    <!-- Xato xabarlari -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Umumiy baholash -->
+                    <div class="mb-4">
+                        <label for="{{ form.overall_rating.id_for_label }}" class="form-label fw-bold">
+                            {{ form.overall_rating.label }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="rating-container mb-2">
+                            <div class="star-rating" data-rating="overall_rating">
+                                {% for i in "12345" %}
+                                <i class="bi bi-star star" data-value="{{ forloop.counter }}"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {{ form.overall_rating }}
+                        {% if form.overall_rating.errors %}
+                            <div class="text-danger small mt-1">{{ form.overall_rating.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Ovqatga umumiy bahoyingizni bering</div>
+                    </div>
+                    
+                    <!-- Ta'm bahosi -->
+                    <div class="mb-4">
+                        <label for="{{ form.taste_rating.id_for_label }}" class="form-label fw-bold">
+                            {{ form.taste_rating.label }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="rating-container mb-2">
+                            <div class="star-rating" data-rating="taste_rating">
+                                {% for i in "12345" %}
+                                <i class="bi bi-star star" data-value="{{ forloop.counter }}"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {{ form.taste_rating }}
+                        {% if form.taste_rating.errors %}
+                            <div class="text-danger small mt-1">{{ form.taste_rating.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Ovqat ta'miga baho bering</div>
+                    </div>
+                    
+                    <!-- Porsiya bahosi -->
+                    <div class="mb-4">
+                        <label for="{{ form.portion_rating.id_for_label }}" class="form-label fw-bold">
+                            {{ form.portion_rating.label }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="rating-container mb-2">
+                            <div class="star-rating" data-rating="portion_rating">
+                                {% for i in "12345" %}
+                                <i class="bi bi-star star" data-value="{{ forloop.counter }}"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {{ form.portion_rating }}
+                        {% if form.portion_rating.errors %}
+                            <div class="text-danger small mt-1">{{ form.portion_rating.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Porsiya hajmiga baho bering</div>
+                    </div>
+                    
+                    <!-- Izohlar -->
+                    <div class="mb-4">
+                        <label for="{{ form.comments.id_for_label }}" class="form-label fw-bold">
+                            {{ form.comments.label }}
+                        </label>
+                        {{ form.comments }}
+                        {% if form.comments.errors %}
+                            <div class="text-danger small mt-1">{{ form.comments.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Qo'shimcha fikr-mulohazalaringizni yozing</div>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent border-0">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'meal_service:service_detail' service.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Baholash yuborish
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .star-rating {
+        font-size: 1.5rem;
+        color: #ddd;
+        cursor: pointer;
+        display: inline-block;
+    }
+    
+    .star {
+        transition: color 0.2s ease;
+        margin-right: 0.2rem;
+    }
+    
+    .star:hover,
+    .star.active {
+        color: #ffc107;
+    }
+    
+    .star.hovered {
+        color: #ffca2c;
+    }
+    
+    .form-label {
+        color: #495057;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .rating-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .rating-display {
+        font-weight: 600;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const starRatings = document.querySelectorAll('.star-rating');
+    
+    starRatings.forEach(function(rating) {
+        const fieldName = rating.getAttribute('data-rating');
+        const hiddenInput = document.getElementById(`id_${fieldName}`);
+        const stars = rating.querySelectorAll('.star');
+        
+        // Existing value ni ko'rsatish
+        const currentValue = hiddenInput.value;
+        if (currentValue) {
+            updateStars(stars, currentValue);
+        }
+        
+        stars.forEach(function(star, index) {
+            star.addEventListener('click', function() {
+                const value = parseInt(star.getAttribute('data-value'));
+                hiddenInput.value = value;
+                updateStars(stars, value);
+                
+                // Rating display ni yangilash
+                updateRatingDisplay(rating, value);
+            });
+            
+            star.addEventListener('mouseenter', function() {
+                const value = parseInt(star.getAttribute('data-value'));
+                highlightStars(stars, value);
+            });
+        });
+        
+        rating.addEventListener('mouseleave', function() {
+            const currentValue = hiddenInput.value;
+            updateStars(stars, currentValue);
+        });
+    });
+    
+    function updateStars(stars, value) {
+        stars.forEach(function(star, index) {
+            if (index < value) {
+                star.classList.remove('hovered');
+                star.classList.add('active');
+            } else {
+                star.classList.remove('active', 'hovered');
+            }
+        });
+    }
+    
+    function highlightStars(stars, value) {
+        stars.forEach(function(star, index) {
+            if (index < value) {
+                star.classList.add('hovered');
+            } else {
+                star.classList.remove('hovered');
+            }
+        });
+    }
+    
+    function updateRatingDisplay(rating, value) {
+        let displayElement = rating.parentElement.querySelector('.rating-display');
+        if (!displayElement) {
+            displayElement = document.createElement('span');
+            displayElement.className = 'rating-display';
+            rating.parentElement.appendChild(displayElement);
+        }
+        displayElement.textContent = `${value}/5`;
+    }
+    
+    // Form validation
+    const form = document.getElementById('feedbackForm');
+    form.addEventListener('submit', function(e) {
+        const overallRating = document.getElementById('id_overall_rating').value;
+        const tasteRating = document.getElementById('id_taste_rating').value;
+        const portionRating = document.getElementById('id_portion_rating').value;
+        
+        if (!overallRating || !tasteRating || !portionRating) {
+            e.preventDefault();
+            alert('Iltimos, barcha majburiy baholarni bering!');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

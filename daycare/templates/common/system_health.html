@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+
+{% block title %}Tizim salomatligi{% endblock %}
+{% block page_title %}Tizim salomatligi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Tizim salomatligi</h3>
+        <p class="text-muted mb-0">Tizim komponentlarining holatini kuzating</p>
+    </div>
+    <form method="post" action="{% url 'common:run_health_check' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Tekshirish
+        </button>
+    </form>
+</div>
+
+<!-- Overall Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm bg-{% if overall_status == 'HEALTHY' %}success{% elif overall_status == 'WARNING' %}warning{% elif overall_status == 'ERROR' %}danger{% else %}dark{% endif %} bg-opacity-10">
+            <div class="card-body text-center py-4">
+                <div class="mb-3">
+                    {% if overall_status == 'HEALTHY' %}
+                        <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                    {% elif overall_status == 'WARNING' %}
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                    {% elif overall_status == 'ERROR' %}
+                        <i class="bi bi-x-circle text-danger" style="font-size: 4rem;"></i>
+                    {% else %}
+                        <i class="bi bi-question-circle text-dark" style="font-size: 4rem;"></i>
+                    {% endif %}
+                </div>
+                <h2 class="text-{% if overall_status == 'HEALTHY' %}success{% elif overall_status == 'WARNING' %}warning{% elif overall_status == 'ERROR' %}danger{% else %}dark{% endif %} mb-2">
+                    {% if overall_status == 'HEALTHY' %}
+                        Tizim sog'lom
+                    {% elif overall_status == 'WARNING' %}
+                        Diqqat talab qiladi
+                    {% elif overall_status == 'ERROR' %}
+                        Xato aniqlandi
+                    {% else %}
+                        Tizim ishlamayapti
+                    {% endif %}
+                </h2>
+                <p class="text-muted mb-0">
+                    {% if overall_status == 'HEALTHY' %}
+                        Barcha komponentlar normal ishlayapti
+                    {% elif overall_status == 'WARNING' %}
+                        Ba'zi komponentlarda ogohlantirish
+                    {% elif overall_status == 'ERROR' %}
+                        Ba'zi komponentlarda xato
+                    {% else %}
+                        Tizim to'liq ishlamayapti
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Component Status -->
+<div class="row g-4 mb-4">
+    {% for component_name, check in latest_checks.items %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="card-title mb-1">{{ check.get_component_display }}</h6>
+                        <small class="text-muted">{{ check.checked_at|timesince }} oldin</small>
+                    </div>
+                    <div class="text-end">
+                        {% if check.status == 'HEALTHY' %}
+                            <i class="bi bi-check-circle text-success" style="font-size: 1.5rem;"></i>
+                        {% elif check.status == 'WARNING' %}
+                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 1.5rem;"></i>
+                        {% elif check.status == 'ERROR' %}
+                            <i class="bi bi-x-circle text-danger" style="font-size: 1.5rem;"></i>
+                        {% else %}
+                            <i class="bi bi-slash-circle text-secondary" style="font-size: 1.5rem;"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <span class="badge bg-{% if check.status == 'HEALTHY' %}success{% elif check.status == 'WARNING' %}warning{% elif check.status == 'ERROR' %}danger{% else %}secondary{% endif %} fs-6">
+                        {{ check.get_status_display }}
+                    </span>
+                </div>
+                
+                {% if check.response_time %}
+                <div class="mb-2">
+                    <small class="text-muted">Javob vaqti:</small>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-{% if check.response_time < 0.5 %}success{% elif check.response_time < 1 %}warning{% else %}danger{% endif %}" 
+                             style="width: {% widthratio check.response_time 2 100 %}%"></div>
+                    </div>
+                    <small class="text-muted">{{ check.response_time|floatformat:3 }}s</small>
+                </div>
+                {% endif %}
+                
+                {% if check.error_message %}
+                <div class="mt-2">
+                    <small class="text-danger">
+                        <i class="bi bi-exclamation-circle me-1"></i>
+                        {{ check.error_message|truncatechars:50 }}
+                    </small>
+                </div>
+                {% endif %}
+                
+                {% if check.details %}
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#details-{{ check.component }}"
+                            title="Batafsil ma'lumot">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                    <div class="collapse mt-2" id="details-{{ check.component }}">
+                        <div class="card card-body bg-light small">
+                            <pre class="mb-0">{{ check.details }}</pre>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="bi bi-heart-pulse text-muted" style="font-size: 4rem;"></i>
+            <h5 class="mt-3 text-muted">Tekshiruv ma'lumotlari yo'q</h5>
+            <p class="text-muted">Tizim salomatligini tekshirish uchun yuqoridagi tugmani bosing</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Recent Checks History -->
+{% if all_checks %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-clock-history me-2"></i>So'nggi tekshiruvlar tarixi
+        </h5>
+    </div>
+    
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Komponent</th>
+                        <th class="border-0">Holat</th>
+                        <th class="border-0">Javob vaqti</th>
+                        <th class="border-0">Xato</th>
+                        <th class="border-0">Tekshirilgan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in all_checks %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ check.get_component_display }}</div>
+                            <small class="text-muted">{{ check.component }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if check.status == 'HEALTHY' %}success{% elif check.status == 'WARNING' %}warning{% elif check.status == 'ERROR' %}danger{% else %}secondary{% endif %}">
+                                {{ check.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if check.response_time %}
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="width: 60px; height: 8px;">
+                                        <div class="progress-bar bg-{% if check.response_time < 0.5 %}success{% elif check.response_time < 1 %}warning{% else %}danger{% endif %}" 
+                                             style="width: {% widthratio check.response_time 2 100 %}%"></div>
+                                    </div>
+                                    <small>{{ check.response_time|floatformat:3 }}s</small>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if check.error_message %}
+                                <small class="text-danger" title="{{ check.error_message }}">
+                                    {{ check.error_message|truncatechars:30 }}
+                                </small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small">
+                                <div>{{ check.checked_at|date:"d.m.Y H:i:s" }}</div>
+                                <small class="text-muted">{{ check.checked_at|timesince }} oldin</small>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Health Check Guidelines -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb me-2"></i>Tizim salomatligi haqida
+                </h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center p-2">
+                            <i class="bi bi-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                            <h6 class="text-success">Sog'lom</h6>
+                            <small class="text-muted">Komponent normal ishlayapti</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-2">
+                            <i class="bi bi-exclamation-triangle text-warning mb-2" style="font-size: 2rem;"></i>
+                            <h6 class="text-warning">Ogohlantirish</h6>
+                            <small class="text-muted">Sekinlashgan yoki kechikish</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-2">
+                            <i class="bi bi-x-circle text-danger mb-2" style="font-size: 2rem;"></i>
+                            <h6 class="text-danger">Xato</h6>
+                            <small class="text-muted">Komponentda muammo bor</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-2">
+                            <i class="bi bi-slash-circle text-secondary mb-2" style="font-size: 2rem;"></i>
+                            <h6 class="text-secondary">Ishlamayapti</h6>
+                            <small class="text-muted">Komponent mavjud emas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .progress {
+        background-color: #e9ecef;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+    
+    pre {
+        font-size: 0.8rem;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 60 seconds
+    setInterval(function() {
+        if (document.visibilityState === 'visible') {
+            window.location.reload();
+        }
+    }, 60000);
+    
+    // Real-time status updates
+    function updateStatus() {
+        fetch('{% url "common:run_health_check" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Update page content or show notification
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-success position-fixed';
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.zIndex = '9999';
+                notification.innerHTML = '<i class="bi bi-check me-1"></i>Tizim holati yangilandi';
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                    window.location.reload();
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Health check failed:', error);
+        });
+    }
+    
+    // Manual refresh button
+    const refreshBtn = document.querySelector('button[type="submit"]');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            this.disabled = true;
+            this.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Tekshirilmoqda...';
+            
+            setTimeout(() => {
+                updateStatus();
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Tekshirish';
+            }, 1000);
+        });
+    }
+});
+
+// CSS for spinning animation
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

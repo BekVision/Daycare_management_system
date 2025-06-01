@@ -1,315 +1,365 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Inventory Dashboard{% endblock %}
-
-{% block extra_css %}
-<style>
-    .stat-card {
-        transition: transform 0.2s;
-    }
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
-    .stat-icon {
-        font-size: 2.5rem;
-        opacity: 0.8;
-    }
-    .alert-card {
-        border-left: 4px solid;
-    }
-    .alert-danger {
-        border-left-color: #dc3545;
-    }
-    .alert-warning {
-        border-left-color: #ffc107;
-    }
-    .transaction-type-IN { color: #28a745; }
-    .transaction-type-OUT { color: #fd7e14; }
-    .transaction-type-ADJUSTMENT { color: #007bff; }
-    .transaction-type-WASTE { color: #dc3545; }
-    .transaction-type-TRANSFER { color: #6f42c1; }
-</style>
-{% endblock %}
+{% block title %}Ombor boshqaruvi{% endblock %}
+{% block page_title %}Ombor Dashboard{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">Inventory Dashboard</h1>
-                    <p class="text-muted">Ombor holati va statistikalar</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Ombor boshqaruvi</h3>
+        <p class="text-muted mb-0">Zaxira va ingredientlarni kuzatish</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Yangi ingredient
+        </a>
+        <a href="{% url 'inventory:transaction_create' %}" class="btn btn-success">
+            <i class="bi bi-arrow-down-circle me-1"></i>Tranzaksiya
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-primary bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-box text-primary" style="font-size: 2.5rem;"></i>
                 </div>
-                <div>
-                    <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Yangi Ingredient
-                    </a>
-                    <a href="{% url 'inventory:transaction_create' %}" class="btn btn-success">
-                        <i class="bi bi-arrow-down-circle"></i> Tranzaksiya
-                    </a>
+                <h3 class="text-primary mb-1">{{ stats.total_ingredients }}</h3>
+                <small class="text-muted">Jami ingredientlar</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-warning mb-1">{{ stats.low_stock_count }}</h3>
+                <small class="text-muted">Kam zaxira</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-x-circle text-danger" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-danger mb-1">{{ stats.out_of_stock_count }}</h3>
+                <small class="text-muted">Tugagan mahsulotlar</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-currency-dollar text-success" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-success mb-1">{{ stats.total_value|floatformat:0 }}</h3>
+                <small class="text-muted">Jami qiymat (so'm)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Tezkor amallar
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-list me-1"></i>Ingredientlar
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'inventory:transaction_list' %}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-arrow-repeat me-1"></i>Tranzaksiyalar
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'inventory:low_stock_report' %}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Kam zaxira
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'inventory:expiry_report' %}" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-calendar-x me-1"></i>Muddati tugayapti
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h6 class="card-title text-uppercase text-muted mb-2">
-                                Jami Ingredientlar
-                            </h6>
-                            <span class="h2 font-weight-bold">{{ total_ingredients }}</span>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-box-seam stat-icon text-primary"></i>
-                        </div>
-                    </div>
-                </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Kategoriya bo'yicha
+                </h5>
             </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h6 class="card-title text-uppercase text-muted mb-2">
-                                Kategoriyalar
-                            </h6>
-                            <span class="h2 font-weight-bold">{{ total_categories }}</span>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-grid-3x3-gap stat-icon text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h6 class="card-title text-uppercase text-muted mb-2">
-                                Kam Zaxira
-                            </h6>
-                            <span class="h2 font-weight-bold text-warning">{{ low_stock_items }}</span>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-exclamation-triangle stat-icon text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h6 class="card-title text-uppercase text-muted mb-2">
-                                Muddati Tugagan
-                            </h6>
-                            <span class="h2 font-weight-bold text-danger">{{ expired_items }}</span>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-calendar-x stat-icon text-danger"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Alerts -->
-    {% if low_stock_items > 0 or expired_items > 0 %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-warning alert-card">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-exclamation-triangle-fill me-3"></i>
+            <div class="card-body">
+                {% for category_stat in category_stats %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
                     <div>
-                        <h6 class="alert-heading mb-1">Diqqat talab qiladigan holatlar</h6>
-                        {% if low_stock_items > 0 %}
-                        <p class="mb-1">{{ low_stock_items }} ta ingredient zaxirasi kam</p>
-                        {% endif %}
-                        {% if expired_items > 0 %}
-                        <p class="mb-0">{{ expired_items }} ta ingredient muddati tugagan</p>
-                        {% endif %}
+                        <span class="fw-bold">{{ category_stat.category.name }}</span>
+                        <small class="text-muted ms-2">{{ category_stat.ingredient_count }} ta</small>
                     </div>
-                    <div class="ms-auto">
-                        <a href="{% url 'inventory:stock_list' %}?low_stock_only=on" class="btn btn-outline-warning btn-sm">
-                            Ko'rish <i class="bi bi-arrow-right"></i>
-                        </a>
+                    <div>
+                        {% if category_stat.low_stock_count > 0 %}
+                            <span class="badge bg-warning">{{ category_stat.low_stock_count }} kam</span>
+                        {% else %}
+                            <span class="badge bg-success">OK</span>
+                        {% endif %}
                     </div>
                 </div>
+                {% empty %}
+                <p class="text-muted small">Kategoriya mavjud emas</p>
+                {% endfor %}
             </div>
         </div>
     </div>
-    {% endif %}
+</div>
 
-    <div class="row">
-        <!-- Recent Transactions -->
-        <div class="col-lg-8 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">
-                            <i class="bi bi-clock-history me-2"></i>
-                            Oxirgi Tranzaksiyalar
-                        </h6>
-                        <a href="{% url 'inventory:transaction_list' %}" class="btn btn-outline-primary btn-sm">
-                            Barchasini ko'rish
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    {% if recent_transactions %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Ingredient</th>
-                                    <th>Turi</th>
-                                    <th>Miqdor</th>
-                                    <th>Sana</th>
-                                    <th>Yaratuvchi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for transaction in recent_transactions %}
-                                <tr>
-                                    <td>
-                                        <div class="fw-medium">{{ transaction.ingredient.name }}</div>
-                                        {% if transaction.supplier %}
-                                        <small class="text-muted">{{ transaction.supplier }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark transaction-type-{{ transaction.transaction_type }}">
-                                            {{ transaction.get_transaction_type_display }}
-                                        </span>
-                                    </td>
-                                    <td>{{ transaction.quantity }} {{ transaction.ingredient.unit }}</td>
-                                    <td>
-                                        <small class="text-muted">
-                                            {{ transaction.created_at|date:"d.m.Y H:i" }}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <small>{{ transaction.created_by.get_full_name|default:transaction.created_by.username }}</small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="bi bi-inbox display-4 text-muted"></i>
-                        <p class="text-muted mt-2">Tranzaksiyalar topilmadi</p>
-                    </div>
-                    {% endif %}
-                </div>
+<!-- Alerts Section -->
+{% if stats.expiring_soon_count > 0 or stats.low_stock_count > 0 or stats.out_of_stock_count > 0 %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm border-start border-warning border-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0 text-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Diqqat talab qiladigan holatlar
+                </h5>
             </div>
-        </div>
-
-        <!-- Most Used Ingredients -->
-        <div class="col-lg-4 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom">
-                    <h6 class="card-title mb-0">
-                        <i class="bi bi-graph-up me-2"></i>
-                        Eng Ko'p Ishlatiladigan
-                    </h6>
-                    <small class="text-muted">Oxirgi 30 kun</small>
-                </div>
-                <div class="card-body">
-                    {% if most_used %}
-                        {% for item in most_used %}
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="card-body">
+                <div class="row">
+                    {% if stats.out_of_stock_count > 0 %}
+                    <div class="col-md-4">
+                        <div class="alert alert-danger d-flex align-items-center">
+                            <i class="bi bi-x-circle me-2"></i>
                             <div>
-                                <div class="fw-medium">{{ item.ingredient__name }}</div>
-                            </div>
-                            <div class="text-end">
-                                <span class="badge bg-primary">{{ item.total_used|floatformat:1 }}</span>
+                                <strong>{{ stats.out_of_stock_count }} ta mahsulot tugagan</strong>
+                                <br><small>Darhol to'ldirish kerak</small>
                             </div>
                         </div>
-                        {% endfor %}
-                    {% else %}
-                    <div class="text-center py-3">
-                        <i class="bi bi-bar-chart display-6 text-muted"></i>
-                        <p class="text-muted mt-2 mb-0">Ma'lumot yo'q</p>
                     </div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom">
-                    <h6 class="card-title mb-0">
-                        <i class="bi bi-lightning me-2"></i>
-                        Tez Amallar
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-primary w-100 py-3">
-                                <i class="bi bi-box-seam display-6 d-block mb-2"></i>
-                                <div>Ingredientlar</div>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{% url 'inventory:stock_list' %}" class="btn btn-outline-success w-100 py-3">
-                                <i class="bi bi-stack display-6 d-block mb-2"></i>
-                                <div>Zaxiralar</div>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-info w-100 py-3">
-                                <i class="bi bi-grid-3x3-gap display-6 d-block mb-2"></i>
-                                <div>Kategoriyalar</div>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{% url 'inventory:stock_report' %}" class="btn btn-outline-warning w-100 py-3">
-                                <i class="bi bi-graph-up display-6 d-block mb-2"></i>
-                                <div>Hisobotlar</div>
-                            </a>
+                    
+                    {% if stats.low_stock_count > 0 %}
+                    <div class="col-md-4">
+                        <div class="alert alert-warning d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>{{ stats.low_stock_count }} ta mahsulot kam</strong>
+                                <br><small>Tez orada to'ldiring</small>
+                            </div>
                         </div>
                     </div>
+                    {% endif %}
+                    
+                    {% if stats.expiring_soon_count > 0 %}
+                    <div class="col-md-4">
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="bi bi-calendar-x me-2"></i>
+                            <div>
+                                <strong>{{ stats.expiring_soon_count }} ta muddati tugayapti</strong>
+                                <br><small>7 kun ichida</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
+{% endif %}
 
-{% block extra_js %}
+<!-- Recent Transactions and Expiring Items -->
+<div class="row g-4">
+    <!-- Recent Transactions -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>So'nggi tranzaksiyalar
+                    </h5>
+                    <a href="{% url 'inventory:transaction_list' %}" class="btn btn-sm btn-outline-primary">
+                        Barchasi
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Ingredient</th>
+                                <th class="border-0">Tur</th>
+                                <th class="border-0">Miqdor</th>
+                                <th class="border-0">Vaqt</th>
+                                <th class="border-0">Foydalanuvchi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'inventory:ingredient_detail' transaction.ingredient.id %}" 
+                                       class="text-decoration-none">
+                                        {{ transaction.ingredient.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if transaction.transaction_type == 'IN' %}success{% elif transaction.transaction_type == 'OUT' %}danger{% elif transaction.transaction_type == 'WASTE' %}warning{% else %}info{% endif %}">
+                                        {{ transaction.get_transaction_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ transaction.quantity }} {{ transaction.ingredient.unit }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ transaction.created_at|timesince }} oldin
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>{{ transaction.created_by.get_full_name }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clock text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2">Hozircha tranzaksiya yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Expiring Items -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-x me-2"></i>Muddati tugayapti
+                    </h5>
+                    <a href="{% url 'inventory:expiry_report' %}" class="btn btn-sm btn-outline-warning">
+                        Barchasi
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if expiring_stocks %}
+                    {% for stock in expiring_stocks %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                        <div>
+                            <div class="fw-bold small">{{ stock.ingredient.name }}</div>
+                            <small class="text-muted">{{ stock.current_quantity }} {{ stock.ingredient.unit }}</small>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-warning">
+                                {{ stock.expiry_date|date:"d.m.Y" }}
+                            </small>
+                            <br>
+                            <small class="text-muted">
+                                {{ stock.days_until_expiry }} kun
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2 small">Yaqin vaqtda muddati tugayotgan mahsulot yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .badge {
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    
+    .btn {
+        border-radius: 0.5rem;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+        border: none;
+    }
+</style>
+
 <script>
-// Real-time data refresh (optional)
-// setInterval(function() {
-//     location.reload();
-// }, 300000); // 5 minutes
-
-// Tooltip initialization
-var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 5 minutes
+    setTimeout(function() {
+        if (document.visibilityState === 'visible') {
+            window.location.reload();
+        }
+    }, 300000);
+    
+    // Chart.js integration (agar kerak bo'lsa)
+    // Category distribution chart
+    const categoryData = [
+        {% for category_stat in category_stats %}
+        {
+            label: '{{ category_stat.category.name }}',
+            value: {{ category_stat.ingredient_count }},
+            lowStock: {{ category_stat.low_stock_count }}
+        },
+        {% endfor %}
+    ];
+    
+    // Simple progress bars for categories
+    categoryData.forEach(function(category, index) {
+        if (category.lowStock > 0) {
+            console.log(`${category.label}: ${category.lowStock} low stock items`);
+        }
+    });
 });
 </script>
 {% endblock %}

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ title }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Meal field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.meal.id_for_label }}" class="form-label">
+                                {{ form.meal.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.meal }}
+                            {% if form.meal.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.meal.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Ingredient field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.ingredient.id_for_label }}" class="form-label">
+                                {{ form.ingredient.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.ingredient }}
+                            {% if form.ingredient.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.ingredient.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Quantity field -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.quantity_per_portion.id_for_label }}" class="form-label">
+                                {{ form.quantity_per_portion.label }} <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.quantity_per_portion }}
+                                <span class="input-group-text" id="unit-display">-</span>
+                            </div>
+                            {% if form.quantity_per_portion.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.quantity_per_portion.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Display order field -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.display_order.id_for_label }}" class="form-label">
+                                {{ form.display_order.label }}
+                            </label>
+                            {{ form.display_order }}
+                            {% if form.display_order.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.display_order.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Kichik raqam birinchi ko'rsatiladi</div>
+                        </div>
+                        
+                        <!-- Is optional field -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Holat</label>
+                            <div class="form-check">
+                                {{ form.is_optional }}
+                                <label class="form-check-label" for="{{ form.is_optional.id_for_label }}">
+                                    {{ form.is_optional.label }}
+                                </label>
+                            </div>
+                            {% if form.is_optional.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.is_optional.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Ixtiyoriy ingredientlar</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes field -->
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">
+                            {{ form.notes.label }}
+                        </label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.notes.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Ingredient haqida qo'shimcha ma'lumot</div>
+                    </div>
+                    
+                    <!-- Form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if recipe %}{% url 'meals:recipe_detail' recipe.pk %}{% else %}{% url 'meals:recipe_list' %}{% endif %}" 
+                           class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>Saqlash
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% if recipe %}
+        <!-- Additional info for editing -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Qo'shimcha ma'lumot</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">Yaratilgan sana:</small>
+                        <div>{{ recipe.created_at|date:"d.m.Y H:i" }}</div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Ovqat:</small>
+                        <div>
+                            <a href="{% url 'meals:meal_detail' recipe.meal.pk %}" class="text-decoration-none">
+                                {{ recipe.meal.name }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update unit display when ingredient changes
+document.getElementById('{{ form.ingredient.id_for_label }}').addEventListener('change', function() {
+    const ingredientSelect = this;
+    const unitDisplay = document.getElementById('unit-display');
+    
+    if (ingredientSelect.value) {
+        // AJAX request to get ingredient unit
+        fetch(`/api/ingredients/${ingredientSelect.value}/`)
+            .then(response => response.json())
+            .then(data => {
+                unitDisplay.textContent = data.unit || '-';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                unitDisplay.textContent = '-';
+            });
+    } else {
+        unitDisplay.textContent = '-';
+    }
+});
+
+// Set initial unit if editing
+{% if recipe %}
+document.getElementById('unit-display').textContent = '{{ recipe.ingredient.unit }}';
+{% endif %}
+</script>
+{% endblock %}

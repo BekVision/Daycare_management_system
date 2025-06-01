@@ -1,0 +1,539 @@
+{% extends 'base.html' %}
+
+{% block title %}Muddati tugayotgan mahsulotlar{% endblock %}
+{% block page_title %}Muddati tugayotgan mahsulotlar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Muddati tugayotgan mahsulotlar</h3>
+        <p class="text-muted mb-0">Yaroqlilik muddati nazorati</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-success" onclick="exportReport()">
+            <i class="bi bi-download me-1"></i>Eksport
+        </button>
+        <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Chop etish
+        </button>
+        <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-calendar-x text-danger" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-danger mb-1">{{ expired_stocks|length }}</h3>
+                <small class="text-muted">Muddati tugagan</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-warning mb-1">{{ expiring_soon|length }}</h3>
+                <small class="text-muted">7 kun ichida tugaydi</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-info bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-calendar-event text-info" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-info mb-1">{{ expiring_month|length }}</h3>
+                <small class="text-muted">30 kun ichida tugaydi</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-shield-check text-success" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-success mb-1">
+                    {% with total_value=0 %}
+                        {% for stock in expired_stocks %}
+                            {% if stock.ingredient.cost_per_unit %}
+                                {% with item_value=stock.current_quantity|mul:stock.ingredient.cost_per_unit %}
+                                    {% with total_value=total_value|add:item_value %}{% endwith %}
+                                {% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ total_value|floatformat:0 }}
+                    {% endwith %}
+                </h3>
+                <small class="text-muted">Yo'qotish qiymati (so'm)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expired Items Alert -->
+{% if expired_stocks %}
+<div class="alert alert-danger border-0 shadow-sm mb-4">
+    <div class="d-flex">
+        <i class="bi bi-exclamation-octagon me-3 mt-1" style="font-size: 1.5rem;"></i>
+        <div>
+            <h5 class="alert-heading mb-2">Kritik holat!</h5>
+            <p class="mb-2">
+                {{ expired_stocks|length }} ta mahsulot muddati tugagan. 
+                Bu mahsulotlarni darhol utilizatsiya qiling va zararni hisoblang.
+            </p>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inventory:transaction_create' %}?type=WASTE" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i>Chiqindi qilish
+                </a>
+                <button class="btn btn-outline-danger btn-sm" onclick="calculateWasteCost()">
+                    <i class="bi bi-calculator me-1"></i>Zarar hisoblash
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Warning for Soon Expiring -->
+{% if expiring_soon %}
+<div class="alert alert-warning border-0 shadow-sm mb-4">
+    <div class="d-flex">
+        <i class="bi bi-clock me-3 mt-1" style="font-size: 1.5rem;"></i>
+        <div>
+            <h6 class="alert-heading mb-2">Diqqat!</h6>
+            <p class="mb-0">
+                {{ expiring_soon|length }} ta mahsulot 7 kun ichida muddati tugaydi. 
+                Ularni birinchi navbatda ishlatishni rejalashtiring.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Expired Items -->
+{% if expired_stocks %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-danger bg-opacity-10 border-0">
+        <h5 class="card-title mb-0 text-danger">
+            <i class="bi bi-calendar-x me-2"></i>Muddati tugagan mahsulotlar
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Mahsulot</th>
+                        <th class="border-0">Kategoriya</th>
+                        <th class="border-0">Miqdor</th>
+                        <th class="border-0">Tugagan sana</th>
+                        <th class="border-0">Qancha o'tdi</th>
+                        <th class="border-0">Taxminiy zarar</th>
+                        <th class="border-0 text-center">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in expired_stocks %}
+                    <tr class="table-danger">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                                <div>
+                                    <div class="fw-bold">
+                                        <a href="{% url 'inventory:ingredient_detail' stock.ingredient.id %}" 
+                                           class="text-decoration-none">
+                                            {{ stock.ingredient.name }}
+                                        </a>
+                                    </div>
+                                    <small class="text-muted">{{ stock.ingredient.unit }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ stock.ingredient.category.name }}</span>
+                        </td>
+                        <td>
+                            <span class="text-danger fw-bold">{{ stock.current_quantity|floatformat:1 }} {{ stock.ingredient.unit }}</span>
+                        </td>
+                        <td>
+                            <span class="text-danger">{{ stock.expiry_date|date:"d.m.Y" }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-danger">
+                                {% with days_passed=stock.days_until_expiry|add:0|mul:-1 %}
+                                    {{ days_passed }} kun oldin
+                                {% endwith %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if stock.ingredient.cost_per_unit %}
+                                {% with waste_cost=stock.current_quantity|mul:stock.ingredient.cost_per_unit %}
+                                <span class="text-danger fw-bold">{{ waste_cost|floatformat:0 }} so'm</span>
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">Belgilanmagan</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'inventory:transaction_create' %}?ingredient={{ stock.ingredient.id }}&type=WASTE" 
+                                   class="btn btn-outline-danger" title="Chiqindi qilish">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                                <a href="{% url 'inventory:stock_update' stock.ingredient.id %}" 
+                                   class="btn btn-outline-primary" title="Stock yangilash">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Expiring Soon (7 days) -->
+{% if expiring_soon %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-warning bg-opacity-10 border-0">
+        <h5 class="card-title mb-0 text-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>7 kun ichida tugaydi
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Mahsulot</th>
+                        <th class="border-0">Kategoriya</th>
+                        <th class="border-0">Miqdor</th>
+                        <th class="border-0">Tugash sanasi</th>
+                        <th class="border-0">Qolgan kunlar</th>
+                        <th class="border-0">Prioritet</th>
+                        <th class="border-0 text-center">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in expiring_soon %}
+                    <tr class="table-warning">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-clock text-warning me-2"></i>
+                                <div>
+                                    <div class="fw-bold">
+                                        <a href="{% url 'inventory:ingredient_detail' stock.ingredient.id %}" 
+                                           class="text-decoration-none">
+                                            {{ stock.ingredient.name }}
+                                        </a>
+                                    </div>
+                                    <small class="text-muted">{{ stock.ingredient.unit }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ stock.ingredient.category.name }}</span>
+                        </td>
+                        <td>
+                            <span class="text-warning fw-bold">{{ stock.current_quantity|floatformat:1 }} {{ stock.ingredient.unit }}</span>
+                        </td>
+                        <td>
+                            <span class="text-warning">{{ stock.expiry_date|date:"d.m.Y" }}</span>
+                        </td>
+                        <td>
+                            {% with days=stock.days_until_expiry %}
+                            <span class="badge bg-{% if days <= 2 %}danger{% elif days <= 5 %}warning{% else %}info{% endif %}">
+                                {{ days }} kun
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with days=stock.days_until_expiry %}
+                                {% if days <= 2 %}
+                                    <span class="badge bg-danger fs-6">Juda yuqori</span>
+                                {% elif days <= 5 %}
+                                    <span class="badge bg-warning fs-6">Yuqori</span>
+                                {% else %}
+                                    <span class="badge bg-info fs-6">O'rtacha</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'inventory:transaction_create' %}?ingredient={{ stock.ingredient.id }}&type=OUT" 
+                                   class="btn btn-outline-success" title="Birinchi navbatda ishlatish">
+                                    <i class="bi bi-arrow-up-circle"></i>
+                                </a>
+                                <a href="{% url 'inventory:ingredient_detail' stock.ingredient.id %}" 
+                                   class="btn btn-outline-info" title="Ko'rish">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Expiring in Month -->
+{% if expiring_month %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-info bg-opacity-10 border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 text-info">
+                <i class="bi bi-calendar-event me-2"></i>30 kun ichida tugaydi
+            </h5>
+            <button class="btn btn-sm btn-outline-info" onclick="toggleMonthlyTable()">
+                <i class="bi bi-eye" id="monthlyToggleIcon"></i>
+                <span id="monthlyToggleText">Ko'rsatish</span>
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0" id="monthlyTable" style="display: none;">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Mahsulot</th>
+                        <th class="border-0">Kategoriya</th>
+                        <th class="border-0">Miqdor</th>
+                        <th class="border-0">Tugash sanasi</th>
+                        <th class="border-0">Qolgan kunlar</th>
+                        <th class="border-0">Rejalashtirish</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in expiring_month %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-calendar-event text-info me-2"></i>
+                                <div>
+                                    <div class="fw-bold">
+                                        <a href="{% url 'inventory:ingredient_detail' stock.ingredient.id %}" 
+                                           class="text-decoration-none">
+                                            {{ stock.ingredient.name }}
+                                        </a>
+                                    </div>
+                                    <small class="text-muted">{{ stock.ingredient.unit }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ stock.ingredient.category.name }}</span>
+                        </td>
+                        <td>
+                            <span class="text-info fw-bold">{{ stock.current_quantity|floatformat:1 }} {{ stock.ingredient.unit }}</span>
+                        </td>
+                        <td>
+                            <span class="text-info">{{ stock.expiry_date|date:"d.m.Y" }}</span>
+                        </td>
+                        <td>
+                            {% with days=stock.days_until_expiry %}
+                            <span class="badge bg-{% if days <= 14 %}warning{% else %}info{% endif %}">
+                                {{ days }} kun
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with days=stock.days_until_expiry %}
+                                {% if days <= 14 %}
+                                    <small class="text-warning">Tez ishlatish</small>
+                                {% else %}
+                                    <small class="text-info">Rejalashtirish</small>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- No Expiring Items -->
+{% if not expired_stocks and not expiring_soon and not expiring_month %}
+<div class="text-center py-5">
+    <i class="bi bi-shield-check text-success" style="font-size: 4rem;"></i>
+    <h5 class="mt-3 text-success">Barcha mahsulotlar xavfsiz!</h5>
+    <p class="text-muted">Hozircha muddati tugayotgan mahsulot yo'q yoki yaroqlilik muddati belgilanmagan.</p>
+    <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-primary">
+        <i class="bi bi-box me-1"></i>Barcha mahsulotlarni ko'rish
+    </a>
+</div>
+{% endif %}
+
+<style>
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .table-danger {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.05);
+    }
+    
+    .badge {
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-1px);
+    }
+    
+    @media print {
+        .btn, .alert .btn {
+            display: none !important;
+        }
+        
+        .card {
+            border: 1px solid #000 !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 30 minutes
+    setInterval(function() {
+        if (document.visibilityState === 'visible') {
+            window.location.reload();
+        }
+    }, 1800000);
+});
+
+function toggleMonthlyTable() {
+    const table = document.getElementById('monthlyTable');
+    const icon = document.getElementById('monthlyToggleIcon');
+    const text = document.getElementById('monthlyToggleText');
+    
+    if (table.style.display === 'none') {
+        table.style.display = 'block';
+        icon.className = 'bi bi-eye-slash';
+        text.textContent = 'Yashirish';
+    } else {
+        table.style.display = 'none';
+        icon.className = 'bi bi-eye';
+        text.textContent = 'Ko\'rsatish';
+    }
+}
+
+function exportReport() {
+    // Create comprehensive CSV export
+    let csv = 'Mahsulot,Kategoriya,Miqdor,Tugash sanasi,Qolgan kunlar,Holat,Taxminiy zarar\n';
+    
+    // Expired items
+    {% for stock in expired_stocks %}
+    csv += `"{{ stock.ingredient.name }}","{{ stock.ingredient.category.name }}","{{ stock.current_quantity|floatformat:1 }} {{ stock.ingredient.unit }}","{{ stock.expiry_date|date:"d.m.Y" }}","Tugagan","Kritik",{% if stock.ingredient.cost_per_unit %}"{{ stock.current_quantity|mul:stock.ingredient.cost_per_unit|floatformat:0 }} so'm"{% else %}"Belgilanmagan"{% endif %}\n`;
+    {% endfor %}
+    
+    // Expiring soon
+    {% for stock in expiring_soon %}
+    csv += `"{{ stock.ingredient.name }}","{{ stock.ingredient.category.name }}","{{ stock.current_quantity|floatformat:1 }} {{ stock.ingredient.unit }}","{{ stock.expiry_date|date:"d.m.Y" }}","{{ stock.days_until_expiry }} kun","Tez tugaydi",""\n`;
+    {% endfor %}
+    
+    // Expiring in month
+    {% for stock in expiring_month %}
+    csv += `"{{ stock.ingredient.name }}","{{ stock.ingredient.category.name }}","{{ stock.current_quantity|floatformat:1 }} {{ stock.ingredient.unit }}","{{ stock.expiry_date|date:"d.m.Y" }}","{{ stock.days_until_expiry }} kun","O'rtacha",""\n`;
+    {% endfor %}
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `muddati_tugayotgan_mahsulotlar_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function calculateWasteCost() {
+    let totalWaste = 0;
+    const wasteItems = [];
+    
+    {% for stock in expired_stocks %}
+        {% if stock.ingredient.cost_per_unit %}
+            const cost{{ forloop.counter }} = {{ stock.current_quantity|mul:stock.ingredient.cost_per_unit|floatformat:0 }};
+            totalWaste += cost{{ forloop.counter }};
+            wasteItems.push('{{ stock.ingredient.name }}: ' + cost{{ forloop.counter }}.toLocaleString() + ' so\'m');
+        {% endif %}
+    {% endfor %}
+    
+    let message = `Jami zarar: ${totalWaste.toLocaleString()} so'm\n\nBatafsil:\n`;
+    message += wasteItems.join('\n');
+    
+    alert(message);
+}
+
+// Real-time countdown for critical items
+function updateCountdowns() {
+    const rows = document.querySelectorAll('tbody tr');
+    const now = new Date();
+    
+    rows.forEach(row => {
+        const dateCell = row.querySelector('td:nth-child(4)');
+        if (dateCell) {
+            const dateText = dateCell.textContent.trim();
+            if (dateText !== '' && dateText !== '-') {
+                const expiry = new Date(dateText.split('.').reverse().join('-'));
+                const diffTime = expiry - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                const daysCell = row.querySelector('td:nth-child(5)');
+                if (daysCell && diffDays <= 0) {
+                    daysCell.innerHTML = '<span class="badge bg-danger">Tugagan</span>';
+                    row.classList.add('table-danger');
+                }
+            }
+        }
+    });
+}
+
+// Update countdowns every hour
+setInterval(updateCountdowns, 3600000);
+</script>
+{% endblock %}

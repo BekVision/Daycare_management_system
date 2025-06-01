@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load mathfilters %}
+
+{% block title %}{{ report.report_date|date:"d.m.Y" }} - Kunlik hisobot{% endblock %}
+
+{% block page_title %}{{ report.report_date|date:"d.m.Y" }} - Kunlik hisobot{% endblock %}
+
+{% block content %}
+<!-- Report Header -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-1">{{ report.report_date|date:"d F Y" }} - {{ report.report_date|date:"l" }}</h5>
+            <small class="text-muted">
+                Yaratuvchi: {{ report.generated_by.get_full_name }} |
+                Yaratilgan: {{ report.generated_at|date:"d.m.Y H:i" }}
+            </small>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-success" onclick="regenerateReport({{ report.pk }})">
+                <i class="bi bi-arrow-clockwise me-1"></i>Qayta yaratish
+            </button>
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-download me-1"></i>Eksport
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')">
+                    <i class="bi bi-file-pdf me-2"></i>PDF
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportReport('excel')">
+                    <i class="bi bi-file-excel me-2"></i>Excel
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportReport('csv')">
+                    <i class="bi bi-file-csv me-2"></i>CSV
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-primary">{{ report.total_meals_served }}</div>
+                <small class="text-muted">Xizmat ovqatlar</small>
+                <div class="mt-1">
+                    <small class="text-muted">{{ report.total_meals_planned }} dan</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-success">{{ report.total_portions_served }}</div>
+                <small class="text-muted">Xizmat porsiyalar</small>
+                <div class="mt-1">
+                    <small class="text-muted">{{ report.total_portions_planned }} dan</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.efficiency_percentage %}
+                <div class="display-6
+                    {% if report.efficiency_percentage >= 85 %}text-success
+                    {% elif report.efficiency_percentage >= 70 %}text-warning
+                    {% else %}text-danger{% endif %}">
+                    {{ report.efficiency_percentage|floatformat:1 }}%
+                </div>
+                {% else %}
+                <div class="display-6 text-muted">-</div>
+                {% endif %}
+                <small class="text-muted">Samaradorlik</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.waste_percentage %}
+                <div class="display-6
+                    {% if report.waste_percentage < 5 %}text-success
+                    {% elif report.waste_percentage < 10 %}text-warning
+                    {% else %}text-danger{% endif %}">
+                    {{ report.waste_percentage|floatformat:1 }}%
+                </div>
+                {% else %}
+                <div class="display-6 text-muted">-</div>
+                {% endif %}
+                <small class="text-muted">Chiqindi</small>
+                <div class="mt-1">
+                    <small class="text-muted">{{ report.total_waste|floatformat:1 }} kg</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-info">{{ report.total_cost|floatformat:0 }}</div>
+                <small class="text-muted">Jami xarajat (so'm)</small>
+                {% if report.total_portions_served > 0 %}
+                <div class="mt-1">
+                    <small class="text-muted">{{ report.total_cost|div:report.total_portions_served|floatformat:0 }} so'm/porsiya</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.summary.performance %}
+                <div class="display-6
+                    {% if report.summary.performance == 'excellent' %}text-success
+                    {% elif report.summary.performance == 'good' %}text-primary
+                    {% elif report.summary.performance == 'poor' %}text-danger
+                    {% else %}text-warning{% endif %}">
+                    <i class="bi bi-emoji-smile"></i>
+                </div>
+                <small class="text-muted">Umumiy holat</small>
+                <div class="mt-1">
+                    <small class="badge
+                        {% if report.summary.performance == 'excellent' %}bg-success
+                        {% elif report.summary.performance == 'good' %}bg-primary
+                        {% elif report.summary.performance == 'poor' %}bg-danger
+                        {% else %}bg-warning{% endif %}">
+                        {% if report.summary.performance == 'excellent' %}A'lo
+                        {% elif report.summary.performance == 'good' %}Yaxshi
+                        {% elif report.summary.performance == 'poor' %}Yomon
+                        {% else %}O'rta{% endif %}
+                    </small>
+                </div>
+                {% else %}
+                <div class="display-6 text-muted"><i class="bi bi-emoji-neutral"></i></div>
+                <small class="text-muted">Ma'lumot yo'q</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Bars -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Samaradorlik tahlili</h6>
+                {% if report.efficiency_percentage %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Porsiya xizmati</span>
+                    <span class="fw-bold">{{ report.efficiency_percentage|floatformat:1 }}%</span>
+                </div>
+                <div class="progress mb-3" style="height: 20px;">
+                    <div class="progress-bar
+                        {% if report.efficiency_percentage >= 85 %}bg-success
+                        {% elif report.efficiency_percentage >= 70 %}bg-warning
+                        {% else %}bg-danger{% endif %}"
+                         style="width: {{ report.efficiency_percentage }}%">
+                        {{ report.efficiency_percentage|floatformat:1 }}%
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col">
+                        <div class="fw-bold text-success">{{ report.total_portions_served }}</div>
+                        <small class="text-muted">Xizmat qilingan</small>
+                    </div>
+                    <div class="col">
+                        <div class="fw-bold text-muted">{{ report.total_portions_planned }}</div>
+                        <small class="text-muted">Rejalashtirilgan</small>
+                    </div>
+                    <div class="col">
+                        <div class="fw-bold text-danger">
+                            {{ report.total_portions_planned|sub:report.total_portions_served }}
+                        </div>
+                        <small class="text-muted">Qolgan</small>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">Ma'lumot mavjud emas</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Chiqindi tahlili</h6>
+                {% if report.waste_percentage %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Chiqindi foizi</span>
+                    <span class="fw-bold">{{ report.waste_percentage|floatformat:1 }}%</span>
+                </div>
+                <div class="progress mb-3" style="height: 20px;">
+                    <div class="progress-bar
+                        {% if report.waste_percentage < 5 %}bg-success
+                        {% elif report.waste_percentage < 10 %}bg-warning
+                        {% else %}bg-danger{% endif %}"
+                         style="width: {{ report.waste_percentage }}%">
+                        {{ report.waste_percentage|floatformat:1 }}%
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col">
+                        <div class="fw-bold text-danger">{{ report.total_waste|floatformat:1 }}</div>
+                        <small class="text-muted">Chiqindi (kg)</small>
+                    </div>
+                    <div class="col">
+                        <div class="fw-bold
+                            {% if report.waste_percentage < 5 %}text-success
+                            {% elif report.waste_percentage < 10 %}text-warning
+                            {% else %}text-danger{% endif %}">
+                            {% if report.waste_percentage < 5 %}Yaxshi
+                            {% elif report.waste_percentage < 10 %}O'rta
+                            {% else %}Yomon{% endif %}
+                        </div>
+                        <small class="text-muted">Holat</small>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">Ma'lumot mavjud emas</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Data -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Ovqatlar tafsiloti</h6>
+            </div>
+            <div class="card-body">
+                {% if report.meals_data.meals %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ovqat</th>
+                                <th>Rejalashtirilgan</th>
+                                <th>Xizmat qilingan</th>
+                                <th>Foiz</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meal in report.meals_data.meals %}
+                            <tr>
+                                <td>{{ meal.name }}</td>
+                                <td>{{ meal.planned }}</td>
+                                <td>{{ meal.served }}</td>
+                                <td>
+                                    {% if meal.planned > 0 %}
+                                    <span class="badge
+                                        {% if meal.percentage >= 90 %}bg-success
+                                        {% elif meal.percentage >= 70 %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ meal.percentage|floatformat:1 }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Ovqatlar ma'lumoti mavjud emas</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Ingredientlar tafsiloti</h6>
+            </div>
+            <div class="card-body">
+                {% if report.ingredients_data.ingredients %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Ishlatilgan</th>
+                                <th>Chiqindi</th>
+                                <th>Chiqindi %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ingredient in report.ingredients_data.ingredients %}
+                            <tr>
+                                <td>{{ ingredient.name }}</td>
+                                <td>{{ ingredient.used|floatformat:1 }} {{ ingredient.unit }}</td>
+                                <td>{{ ingredient.waste|floatformat:1 }} {{ ingredient.unit }}</td>
+                                <td>
+                                    {% if ingredient.used > 0 %}
+                                    <span class="badge
+                                        {% if ingredient.waste_percentage < 5 %}bg-success
+                                        {% elif ingredient.waste_percentage < 10 %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ ingredient.waste_percentage|floatformat:1 }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Ingredientlar ma'lumoti mavjud emas</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary and Recommendations -->
+{% if report.summary.recommendations %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0">Tavsiyalar va xulosa</h6>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h6><i class="bi bi-lightbulb me-2"></i>Tavsiyalar:</h6>
+            <ul class="mb-0">
+                {% for recommendation in report.summary.recommendations %}
+                <li>{{ recommendation }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Navigation -->
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'reports:daily_reports_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Hisobotlar ro'yxatiga qaytish
+            </a>
+            <div>
+                <a href="{% url 'reports:daily_report_generate' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Yangi hisobot yaratish
+                </a>
+                <a href="{% url 'reports:dashboard' %}" class="btn btn-primary">
+                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function regenerateReport(reportId) {
+    if (confirm('Bu hisobotni qayta yaratishni xohlaysizmi? Mavjud ma\'lumotlar yangilanadi.')) {
+        fetch(`/reports/api/daily/${reportId}/regenerate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+
+function exportReport(format) {
+    // Export functionality will be implemented here
+    alert(`${format.toUpperCase()} formatida eksport qilish hozircha ishlab chiqilmoqda`);
+}
+</script>
+{% endblock %}

@@ -1,108 +1,311 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="h3">{{ title }}</h1>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:category_list' %}">Kategoriyalar</a></li>
-                    <li class="breadcrumb-item active">{{ title }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-folder-plus"></i>
-                        Kategoriya Ma'lumotlari
-                    </h6>
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-{% if category %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>{{ title }}
+                    </h5>
+                    <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
                 </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-
-                        <div class="mb-3">
+            </div>
+            
+            <div class="card-body">
+                <form method="post" id="categoryForm">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <!-- Name Field -->
+                        <div class="col-12">
                             <label for="{{ form.name.id_for_label }}" class="form-label">
-                                {{ form.name.label }} <span class="text-danger">*</span>
+                                <i class="bi bi-tag me-1"></i>Kategoriya nomi <span class="text-danger">*</span>
                             </label>
                             {{ form.name }}
                             {% if form.name.errors %}
-                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
                             {% endif %}
-                            <div class="form-text">Kategoriya nomini kiriting (maksimal 100 belgi)</div>
+                            <div class="form-text">Kategoriya uchun noyob nom kiriting</div>
                         </div>
-
-                        <div class="mb-3">
+                        
+                        <!-- Description Field -->
+                        <div class="col-12">
                             <label for="{{ form.description.id_for_label }}" class="form-label">
-                                {{ form.description.label }}
+                                <i class="bi bi-text-left me-1"></i>Tavsif
                             </label>
                             {{ form.description }}
                             {% if form.description.errors %}
-                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
                             {% endif %}
-                            <div class="form-text">Kategoriya haqida qisqacha ma'lumot (ixtiyoriy)</div>
+                            <div class="form-text">Kategoriya haqida qisqa ma'lumot</div>
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.display_order.id_for_label }}" class="form-label">
-                                        {{ form.display_order.label }}
-                                    </label>
-                                    {{ form.display_order }}
-                                    {% if form.display_order.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.display_order.errors.0 }}</div>
-                                    {% endif %}
-                                    <div class="form-text">Ro'yxatda ko'rsatish tartibi</div>
-                                </div>
+                        
+                        <!-- Display Order Field -->
+                        <div class="col-6">
+                            <label for="{{ form.display_order.id_for_label }}" class="form-label">
+                                <i class="bi bi-sort-numeric-up me-1"></i>Tartib raqami
+                            </label>
+                            {{ form.display_order }}
+                            {% if form.display_order.errors %}
+                                <div class="text-danger small mt-1">{{ form.display_order.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Kategoriyalarni tartiblash uchun</div>
+                        </div>
+                        
+                        <!-- Active Status -->
+                        <div class="col-6">
+                            <label class="form-label">Holat</label>
+                            <div class="form-check mt-2">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    <i class="bi bi-power me-1"></i>Faol holat
+                                </label>
+                                <div class="form-text">Nofaol kategoriyalar ro'yxatlarda ko'rsatilmaydi</div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Holat</label>
-                                    <div class="form-check form-switch">
-                                        {{ form.is_active }}
-                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                            {{ form.is_active.label }}
-                                        </label>
-                                    </div>
-                                    {% if form.is_active.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.is_active.errors.0 }}</div>
-                                    {% endif %}
-                                    <div class="form-text">Faol bo'lmagan kategoriyalar ro'yxatda ko'rinmaydi</div>
-                                </div>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger small mt-1">{{ form.is_active.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Form Validation Errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    {% if category %}Yangilash{% else %}Yaratish{% endif %}
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Form Errors -->
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                <h6 class="alert-heading">Xatoliklar:</h6>
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Orqaga
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i>
-                                {% if category %}Yangilash{% else %}Saqlash{% endif %}
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Information -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb me-2"></i>Maslahatlar
+                </h6>
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="list-unstyled small text-muted mb-0">
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Kategoriya nomi noyob bo'lishi kerak</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Tartib raqami kichikdan kattaga tartiblanadi</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Nofaol kategoriyalar yangi ingredientlarda ko'rsatilmaydi</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Mavjud ingredientlar kategoriya nofaol bo'lganda ham saqlanadi</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
+        
+        <!-- Current Category Info (if editing) -->
+        {% if category %}
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-info-circle me-2"></i>Joriy ma'lumotlar
+                </h6>
+                <div class="row g-2 small">
+                    <div class="col-md-6">
+                        <strong>Ingredientlar soni:</strong> {{ category.ingredients.count }} ta
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Yaratilgan:</strong> {{ category.created_at|date:"d.m.Y H:i" }}
+                    </div>
+                    <div class="col-12">
+                        <strong>Ingredientlar:</strong>
+                        <div class="mt-1">
+                            {% for ingredient in category.ingredients.all|slice:":5" %}
+                                <span class="badge bg-light text-dark me-1">{{ ingredient.name }}</span>
+                            {% empty %}
+                                <span class="text-muted">Hozircha ingredient yo'q</span>
+                            {% endfor %}
+                            {% if category.ingredients.count > 5 %}
+                                <small class="text-muted">va yana {{ category.ingredients.count|add:"-5" }} ta...</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('categoryForm');
+    const nameField = document.querySelector('[name="name"]');
+    const displayOrderField = document.querySelector('[name="display_order"]');
+    
+    // Real-time validation
+    nameField.addEventListener('input', function() {
+        if (this.value.length < 2) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        }
+    });
+    
+    // Display order validation
+    displayOrderField.addEventListener('input', function() {
+        const value = parseInt(this.value);
+        if (isNaN(value) || value < 0) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        }
+    });
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check required fields
+        if (!nameField.value.trim()) {
+            nameField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        const orderValue = parseInt(displayOrderField.value);
+        if (isNaN(orderValue) || orderValue < 0) {
+            displayOrderField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            
+            // Show error message
+            let errorDiv = document.querySelector('.form-error-message');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger alert-dismissible fade show form-error-message';
+                errorDiv.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Iltimos, barcha majburiy maydonlarni to'ldiring.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                form.insertBefore(errorDiv, form.querySelector('.row.mt-4'));
+            }
+            
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        }
+    });
+    
+    // Auto-save draft (local storage)
+    const draftKey = 'category_draft_{{ category.id|default:"new" }}';
+    
+    [nameField, displayOrderField].forEach(field => {
+        field.addEventListener('input', function() {
+            const draft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+            draft[field.name] = field.value;
+            localStorage.setItem(draftKey, JSON.stringify(draft));
+        });
+    });
+    
+    // Load draft on page load
+    {% if not category %}
+    const savedDraft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+    Object.keys(savedDraft).forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field && !field.value) {
+            field.value = savedDraft[fieldName];
+        }
+    });
+    {% endif %}
+    
+    // Clear draft on successful submission
+    form.addEventListener('submit', function() {
+        if (this.checkValidity()) {
+            localStorage.removeItem(draftKey);
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + S: Save
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            form.submit();
+        }
+        
+        // Escape: Cancel
+        if (e.key === 'Escape') {
+            const cancelBtn = form.querySelector('a[href*="category_list"]');
+            if (cancelBtn) cancelBtn.click();
+        }
+    });
+});
+</script>
+
+<style>
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .is-valid {
+        border-color: #198754;
+    }
+    
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #5a67d8, #6b46c1);
+        transform: translateY(-1px);
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .badge {
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+</style>
 {% endblock %}

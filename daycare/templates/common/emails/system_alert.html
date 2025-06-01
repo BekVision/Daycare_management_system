@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tizim ogohlantirishi - {{ title }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg,
+                {% if level == 'error' or level == 'danger' %}#dc3545, #c82333{% elif level == 'warning' %}#ffc107, #e0a800{% elif level == 'success' %}#28a745, #1e7e34{% else %}#007bff, #0056b3{% endif %});
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .alert-box {
+            background-color:
+                {% if level == 'error' or level == 'danger' %}#f8d7da{% elif level == 'warning' %}#fff3cd{% elif level == 'success' %}#d4edda{% else %}#d1ecf1{% endif %};
+            border: 1px solid
+                {% if level == 'error' or level == 'danger' %}#f5c6cb{% elif level == 'warning' %}#ffeaa7{% elif level == 'success' %}#c3e6cb{% else %}#bee5eb{% endif %};
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .alert-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color:
+                {% if level == 'error' or level == 'danger' %}#721c24{% elif level == 'warning' %}#856404{% elif level == 'success' %}#155724{% else %}#0c5460{% endif %};
+        }
+
+        .alert-message {
+            font-size: 16px;
+            color:
+                {% if level == 'error' or level == 'danger' %}#721c24{% elif level == 'warning' %}#856404{% elif level == 'success' %}#155724{% else %}#0c5460{% endif %};
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .meta-info {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .meta-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .meta-value {
+            color: #6c757d;
+        }
+
+        .action-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color:
+                {% if level == 'error' or level == 'danger' %}#dc3545{% elif level == 'warning' %}#ffc107{% elif level == 'success' %}#28a745{% else %}#007bff{% endif %};
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 0 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color:
+                {% if level == 'error' or level == 'danger' %}#c82333{% elif level == 'warning' %}#e0a800{% elif level == 'success' %}#1e7e34{% else %}#0056b3{% endif %};
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .footer p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background-color:
+                {% if level == 'error' or level == 'danger' %}#dc3545{% elif level == 'warning' %}#ffc107{% elif level == 'success' %}#28a745{% else %}#007bff{% endif %};
+            color: white;
+        }
+
+        .timestamp {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background-color: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .meta-row {
+                flex-direction: column;
+            }
+
+            .btn {
+                display: block;
+                margin: 5px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon">
+                {% if level == 'error' or level == 'danger' %}
+                    ❌
+                {% elif level == 'warning' %}
+                    ⚠️
+                {% elif level == 'success' %}
+                    ✅
+                {% else %}
+                    ℹ️
+                {% endif %}
+            </div>
+            <h1>Tizim ogohlantirishi</h1>
+            <span class="priority-badge">
+                {% if level == 'error' or level == 'danger' %}
+                    Muhim
+                {% elif level == 'warning' %}
+                    Diqqat
+                {% elif level == 'success' %}
+                    Ma'lumot
+                {% else %}
+                    Bildirishnoma
+                {% endif %}
+            </span>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Alert Box -->
+            <div class="alert-box">
+                <div class="alert-title">{{ title }}</div>
+                <div class="alert-message">{{ message }}</div>
+            </div>
+
+            <!-- Meta Information -->
+            <div class="meta-info">
+                <div class="meta-row">
+                    <span class="meta-label">Tizim:</span>
+                    <span class="meta-value">{{ site_name }}</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-label">Vaqt:</span>
+                    <span class="meta-value">
+                        <span class="timestamp">{{ timestamp|date:"d.m.Y H:i:s" }}</span>
+                    </span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-label">Darajasi:</span>
+                    <span class="meta-value">
+                        {% if level == 'error' or level == 'danger' %}
+                            🔴 Kritik xato
+                        {% elif level == 'warning' %}
+                            🟡 Ogohlantirish
+                        {% elif level == 'success' %}
+                            🟢 Muvaffaqiyat
+                        {% else %}
+                            🔵 Ma'lumot
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-label">Holat:</span>
+                    <span class="meta-value">Avtomatik yuborildi</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-section">
+                <h3 style="margin-bottom: 15px; color: #495057;">Tavsiya etilgan amallar:</h3>
+
+                {% if level == 'error' or level == 'danger' %}
+                    <a href="#" class="btn">Tizimni tekshirish</a>
+                    <a href="#" class="btn btn-secondary">Loglarni ko'rish</a>
+                {% elif level == 'warning' %}
+                    <a href="#" class="btn">Tafsilotlarni ko'rish</a>
+                    <a href="#" class="btn btn-secondary">Sozlamalar</a>
+                {% else %}
+                    <a href="#" class="btn">Davom etish</a>
+                    <a href="#" class="btn btn-secondary">Batafsil</a>
+                {% endif %}
+            </div>
+
+            <!-- Additional Information -->
+            {% if level == 'error' or level == 'danger' %}
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                <h4 style="color: #856404; margin-top: 0;">⚡ Tezkor harakatlar:</h4>
+                <ul style="color: #856404; margin-bottom: 0;">
+                    <li>Tizim administratori bilan bog'laning</li>
+                    <li>Zaxira nusxasini tekshiring</li>
+                    <li>Foydalanuvchilarni xabardor qiling</li>
+                    <li>Muammoni bartaraf etish rejasini amalga oshiring</li>
+                </ul>
+            </div>
+            {% elif level == 'warning' %}
+            <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                <h4 style="color: #0c5460; margin-top: 0;">💡 Tavsiyalar:</h4>
+                <ul style="color: #0c5460; margin-bottom: 0;">
+                    <li>Tizim ishlashini kuzatib boring</li>
+                    <li>Kerakli sozlamalarni tekshiring</li>
+                    <li>Proaktiv choralar ko'ring</li>
+                    <li>Muntzam monitoring o'rnating</li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                Bu avtomatik xabar <strong>{{ site_name }}</strong> tizimidan yuborildi.<br>
+                Savollar bo'lsa, administrator bilan bog'laning:
+                <a href="mailto:admin@daycare.com">admin@daycare.com</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 12px; color: #adb5bd;">
+                📧 Email ID: ALERT-{{ timestamp|date:"YmdHis" }}<br>
+                🕒 Yuborilgan vaqt: {{ timestamp|date:"d F Y, H:i:s" }}
+            </p>
+        </div>
+    </div>
+</body>
+</html>

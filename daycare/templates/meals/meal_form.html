@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ title }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Name field -->
+                        <div class="col-md-8 mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Category field -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                {{ form.category.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.category.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Description field -->
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Ovqat haqida qisqacha ma'lumot</div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Preparation time -->
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.preparation_time.id_for_label }}" class="form-label">
+                                {{ form.preparation_time.label }}
+                            </label>
+                            <div class="input-group">
+                                {{ form.preparation_time }}
+                                <span class="input-group-text">daq</span>
+                            </div>
+                            {% if form.preparation_time.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.preparation_time.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Cooking time -->
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.cooking_time.id_for_label }}" class="form-label">
+                                {{ form.cooking_time.label }}
+                            </label>
+                            <div class="input-group">
+                                {{ form.cooking_time }}
+                                <span class="input-group-text">daq</span>
+                            </div>
+                            {% if form.cooking_time.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.cooking_time.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Difficulty level -->
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.difficulty_level.id_for_label }}" class="form-label">
+                                {{ form.difficulty_level.label }}
+                            </label>
+                            {{ form.difficulty_level }}
+                            {% if form.difficulty_level.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.difficulty_level.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Portions per recipe -->
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.portions_per_recipe.id_for_label }}" class="form-label">
+                                {{ form.portions_per_recipe.label }}
+                            </label>
+                            {{ form.portions_per_recipe }}
+                            {% if form.portions_per_recipe.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.portions_per_recipe.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Calories per portion -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.calories_per_portion.id_for_label }}" class="form-label">
+                                {{ form.calories_per_portion.label }}
+                            </label>
+                            <div class="input-group">
+                                {{ form.calories_per_portion }}
+                                <span class="input-group-text">kcal</span>
+                            </div>
+                            {% if form.calories_per_portion.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.calories_per_portion.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Photo field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.photo.id_for_label }}" class="form-label">
+                                {{ form.photo.label }}
+                            </label>
+                            {{ form.photo }}
+                            {% if form.photo.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.photo.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if meal and meal.photo %}
+                            <div class="mt-2">
+                                <small class="text-muted">Joriy rasm:</small>
+                                <img src="{{ meal.photo.url }}" alt="{{ meal.name }}" 
+                                     class="img-thumbnail ms-2" style="max-height: 50px;">
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Instructions field -->
+                    <div class="mb-3">
+                        <label for="{{ form.instructions.id_for_label }}" class="form-label">
+                            {{ form.instructions.label }}
+                        </label>
+                        {{ form.instructions }}
+                        {% if form.instructions.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.instructions.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Ovqatni tayyorlash bo'yicha batafsil yo'riqnoma</div>
+                    </div>
+                    
+                    <!-- Is active field -->
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+                        {% if form.is_active.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.is_active.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Nofaol ovqatlar ro'yxatlarda ko'rsatilmaydi</div>
+                    </div>
+                    
+                    <!-- Form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if meal %}{% url 'meals:meal_detail' meal.pk %}{% else %}{% url 'meals:meal_list' %}{% endif %}" 
+                           class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>Saqlash
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% if meal %}
+        <!-- Additional info for editing -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Qo'shimcha ma'lumot</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-4">
+                        <small class="text-muted">Yaratilgan sana:</small>
+                        <div>{{ meal.created_at|date:"d.m.Y H:i" }}</div>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Yaratuvchi:</small>
+                        <div>{{ meal.created_by.get_full_name }}</div>
+                    </div>
+                    <div class="col-4">
+                        {% if meal.updated_at != meal.created_at %}
+                        <small class="text-muted">So'nggi yangilanish:</small>
+                        <div>{{ meal.updated_at|date:"d.m.Y H:i" }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Photo preview
+document.getElementById('{{ form.photo.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Remove existing preview
+            const existingPreview = document.querySelector('.photo-preview');
+            if (existingPreview) {
+                existingPreview.remove();
+            }
+            
+            // Create new preview
+            const preview = document.createElement('div');
+            preview.className = 'photo-preview mt-2';
+            preview.innerHTML = `
+                <small class="text-muted">Yangi rasm:</small>
+                <img src="${e.target.result}" alt="Preview" 
+                     class="img-thumbnail ms-2" style="max-height: 100px;">
+            `;
+            
+            document.getElementById('{{ form.photo.id_for_label }}').parentElement.appendChild(preview);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

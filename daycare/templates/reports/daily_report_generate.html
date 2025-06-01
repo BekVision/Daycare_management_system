@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Kunlik hisobot yaratish{% endblock %}
+
+{% block page_title %}Kunlik hisobot yaratish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Yangi kunlik hisobot yaratish</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label for="{{ form.report_date.id_for_label }}" class="form-label">
+                            <i class="bi bi-calendar-date me-2"></i>{{ form.report_date.label }}
+                        </label>
+                        {{ form.report_date }}
+                        {% if form.report_date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.report_date.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Qaysi sana uchun hisobot yaratmoqchisiz?
+                        </div>
+                    </div>
+
+                    <!-- Information Card -->
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>Eslatma:</h6>
+                        <ul class="mb-0">
+                            <li>Hisobot yaratish bir necha daqiqa vaqt olishi mumkin</li>
+                            <li>Agar shu sana uchun hisobot mavjud bo'lsa, u yangilanadi</li>
+                            <li>Hisobot ma'lumotlari ovqatlar va inventory ma'lumotlariga asoslanadi</li>
+                            <li>Faqat o'tgan kunlar uchun hisobot yaratish mumkin</li>
+                        </ul>
+                    </div>
+
+                    <!-- Expected Data Preview -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Hisobotga kiradigan ma'lumotlar</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Ovqatlar ma'lumotlari:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Rejalashtirilgan ovqatlar soni</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Xizmat qilingan ovqatlar soni</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Rejalashtirilgan porsiyalar</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Xizmat qilingan porsiyalar</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Ovqatlar bo'yicha xarajat</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Ingredientlar ma'lumotlari:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Ishlatilgan ingredientlar</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Chiqindi miqdori</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Zaxira o'zgarishlari</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Xarajat taqsimoti</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Samaradorlik tahlili</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'reports:daily_reports_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="generateBtn">
+                            <span id="generateBtnText">
+                                <i class="bi bi-file-earmark-plus me-1"></i>Hisobot yaratish
+                            </span>
+                            <span id="generateBtnLoading" class="d-none">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Yaratilmoqda...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Reports Preview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">So'nggi yaratilgan hisobotlar</h6>
+            </div>
+            <div class="card-body">
+                <!-- Bu qism view'da recent reports ma'lumotlarini yuborish orqali to'ldiriladi -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary rounded-circle p-2 me-3">
+                                <i class="bi bi-calendar-check text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Bugun</div>
+                                <small class="text-muted">Hisobot mavjud emas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-success rounded-circle p-2 me-3">
+                                <i class="bi bi-calendar-minus text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Kecha</div>
+                                <small class="text-muted">Hisobot mavjud emas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <a href="{% url 'reports:daily_reports_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-list me-1"></i>Barcha hisobotlarni ko'rish
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const btn = document.getElementById('generateBtn');
+    const btnText = document.getElementById('generateBtnText');
+    const btnLoading = document.getElementById('generateBtnLoading');
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btnText.classList.add('d-none');
+    btnLoading.classList.remove('d-none');
+
+    // Re-enable after form submission (in case of errors)
+    setTimeout(() => {
+        btn.disabled = false;
+        btnText.classList.remove('d-none');
+        btnLoading.classList.add('d-none');
+    }, 30000); // 30 seconds timeout
+});
+
+// Set default date to yesterday
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.querySelector('input[type="date"]');
+    if (!dateInput.value) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        dateInput.value = yesterday.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}

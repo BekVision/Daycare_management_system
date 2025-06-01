@@ -1,4 +1,6 @@
+# reports/models.py
 from django.db import models
+
 
 class DailyReport(models.Model):
     report_date = models.DateField(unique=True)
@@ -22,8 +24,9 @@ class DailyReport(models.Model):
     class Meta:
         verbose_name = "Kunlik hisobot"
         verbose_name_plural = "Kunlik hisobotlar"
+        ordering = ['-report_date']
         indexes = [
-            models.Index(fields=['report_date'], name='unique_daily_report_date'),
+            models.Index(fields=['report_date'], name='idx_daily_report_date'),
         ]
 
 
@@ -50,8 +53,9 @@ class MonthlyReport(models.Model):
     class Meta:
         verbose_name = "Oylik hisobot"
         verbose_name_plural = "Oylik hisobotlar"
+        ordering = ['-report_month']
         indexes = [
-            models.Index(fields=['report_month'], name='unique_monthly_report'),
+            models.Index(fields=['report_month'], name='idx_monthly_report'),
         ]
 
 
@@ -74,8 +78,9 @@ class IngredientUsageReport(models.Model):
     class Meta:
         verbose_name = "Ingredient ishlatish hisoboti"
         verbose_name_plural = "Ingredient ishlatish hisobotlari"
+        ordering = ['-report_date', 'ingredient__name']
         indexes = [
-            models.Index(fields=['ingredient', 'report_date'], name='unique_ingredient_usage_date'),
+            models.Index(fields=['ingredient', 'report_date'], name='idx_ingredient_usage_date'),
         ]
         constraints = [
             models.UniqueConstraint(fields=['ingredient', 'report_date'], name='unique_ingredient_report_date')

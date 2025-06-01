@@ -1,357 +1,256 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load mathfilters %}
 
-{% block title %}{{ ingredient.name }} - Tafsilotlar{% endblock %}
-
-{% block extra_css %}
-<style>
-    .info-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-    }
-    .stat-card {
-        transition: transform 0.2s;
-        border-radius: 10px;
-    }
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
-    .transaction-type-IN { color: #28a745; font-weight: bold; }
-    .transaction-type-OUT { color: #fd7e14; font-weight: bold; }
-    .transaction-type-ADJUSTMENT { color: #007bff; font-weight: bold; }
-    .transaction-type-WASTE { color: #dc3545; font-weight: bold; }
-    .transaction-type-TRANSFER { color: #6f42c1; font-weight: bold; }
-    .activity-timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-    .activity-timeline::before {
-        content: '';
-        position: absolute;
-        left: 15px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: #e9ecef;
-    }
-    .activity-item {
-        position: relative;
-        margin-bottom: 1.5rem;
-    }
-    .activity-item::before {
-        content: '';
-        position: absolute;
-        left: -23px;
-        top: 8px;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #007bff;
-    }
-</style>
-{% endblock %}
+{% block title %}{{ ingredient.name }} - Ingredient detali{% endblock %}
+{% block page_title %}Ingredient detali{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item">
-                                <a href="{% url 'inventory:dashboard' %}">Inventory</a>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <a href="{% url 'inventory:ingredient_list' %}">Ingredientlar</a>
-                            </li>
-                            <li class="breadcrumb-item active">{{ ingredient.name }}</li>
-                        </ol>
-                    </nav>
-                    <h1 class="h3 mb-0">{{ ingredient.name }}</h1>
-                </div>
-                <div class="d-flex gap-2">
-                    {% if user.role.permissions.can_manage_inventory %}
-                    <div class="dropdown">
-                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-gear"></i> Amallar
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="{% url 'inventory:ingredient_update' ingredient.pk %}">
-                                    <i class="bi bi-pencil"></i> Tahrirlash
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'inventory:stock_adjustment' ingredient.pk %}">
-                                    <i class="bi bi-sliders"></i> Zaxira sozlash
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'inventory:transaction_create' %}?ingredient={{ ingredient.pk }}">
-                                    <i class="bi bi-plus-circle"></i> Tranzaksiya qo'shish
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="{% url 'inventory:ingredient_delete' ingredient.pk %}">
-                                    <i class="bi bi-trash"></i> O'chirish
-                                </a>
-                            </li>
-                        </ul>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">{{ ingredient.name }}</h3>
+        <p class="text-muted mb-0">{{ ingredient.category.name }} kategoriyasi</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'inventory:ingredient_edit' ingredient.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil me-1"></i>Tahrirlash
+        </a>
+        <a href="{% url 'inventory:stock_update' ingredient.id %}" class="btn btn-success">
+            <i class="bi bi-arrow-repeat me-1"></i>Stock yangilash
+        </a>
+        <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Orqaga
+        </a>
+    </div>
+</div>
+
+<!-- Main Info Cards -->
+<div class="row g-4 mb-4">
+    <!-- Basic Info -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Asosiy ma'lumotlar
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Nomi:</label>
+                        <div>{{ ingredient.name }}</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Kategoriya:</label>
+                        <div>
+                            <span class="badge bg-primary">{{ ingredient.category.name }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Birlik:</label>
+                        <div>{{ ingredient.unit }}</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Holat:</label>
+                        <div>
+                            {% if ingredient.is_active %}
+                                <span class="badge bg-success">Faol</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Nofaol</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if ingredient.barcode %}
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Barcode:</label>
+                        <div><code>{{ ingredient.barcode }}</code></div>
                     </div>
                     {% endif %}
-                    <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Orqaga
-                    </a>
+                    {% if ingredient.description %}
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Tavsif:</label>
+                        <div class="text-muted">{{ ingredient.description }}</div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row">
-        <!-- Main Info Card -->
-        <div class="col-lg-4 mb-4">
-            <div class="card info-card border-0 shadow-sm">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-box-seam display-4 mb-3 opacity-75"></i>
-                    <h4 class="card-title">{{ ingredient.name }}</h4>
-                    <p class="card-text">
-                        <i class="bi bi-tag"></i> {{ ingredient.category.name }}
-                    </p>
-                    <p class="card-text">
-                        <i class="bi bi-rulers"></i> O'lchov birligi: {{ ingredient.unit }}
-                    </p>
-                    {% if ingredient.barcode %}
-                    <p class="card-text">
-                        <i class="bi bi-upc-scan"></i> Barcode: {{ ingredient.barcode }}
-                    </p>
-                    {% endif %}
-                    {% if ingredient.description %}
-                    <p class="card-text opacity-75">
-                        {{ ingredient.description }}
-                    </p>
-                    {% endif %}
-                </div>
+    
+    <!-- Stock Info -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box me-2"></i>Zaxira ma'lumotlari
+                </h5>
             </div>
-        </div>
-
-        <!-- Stock Status -->
-        <div class="col-lg-8 mb-4">
-            <div class="row">
+            <div class="card-body">
                 {% if ingredient.stock %}
-                <!-- Current Stock -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stat-card border-0 shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-stack display-4 text-primary mb-3"></i>
-                            <h3 class="card-title">{{ ingredient.stock.current_quantity|floatformat:1 }}</h3>
-                            <p class="card-text text-muted">{{ ingredient.unit }}</p>
-                            <p class="card-text">
-                                {% if ingredient.stock.current_quantity <= 0 %}
-                                    <span class="badge bg-danger">Tugagan</span>
-                                {% elif ingredient.stock.current_quantity <= ingredient.min_threshold %}
-                                    <span class="badge bg-warning">Kam</span>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Joriy zaxira:</label>
+                        <div class="h5 mb-0 text-primary">
+                            {{ ingredient.stock.current_quantity }} {{ ingredient.unit }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Rezerv qilingan:</label>
+                        <div class="h5 mb-0 text-warning">
+                            {{ ingredient.stock.reserved_quantity }} {{ ingredient.unit }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Mavjud:</label>
+                        <div class="h5 mb-0 {% if ingredient.is_out_of_stock %}text-danger{% elif ingredient.is_low_stock %}text-warning{% else %}text-success{% endif %}">
+                            {{ ingredient.available_quantity }} {{ ingredient.unit }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Holat:</label>
+                        <div>
+                            {% if ingredient.is_out_of_stock %}
+                                <span class="badge bg-danger fs-6">Tugagan</span>
+                            {% elif ingredient.is_low_stock %}
+                                <span class="badge bg-warning fs-6">Kam</span>
+                            {% else %}
+                                <span class="badge bg-success fs-6">Yetarli</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">So'nggi to'ldirish:</label>
+                        <div>
+                            {% if ingredient.stock.last_restock_date %}
+                                {{ ingredient.stock.last_restock_date|date:"d.m.Y" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Muddati:</label>
+                        <div>
+                            {% if ingredient.stock.expiry_date %}
+                                {% if ingredient.stock.is_expired %}
+                                    <span class="text-danger">{{ ingredient.stock.expiry_date|date:"d.m.Y" }} (Tugagan)</span>
+                                {% elif ingredient.stock.days_until_expiry <= 7 %}
+                                    <span class="text-warning">{{ ingredient.stock.expiry_date|date:"d.m.Y" }} ({{ ingredient.stock.days_until_expiry }} kun)</span>
                                 {% else %}
-                                    <span class="badge bg-success">Yaxshi</span>
+                                    <span class="text-success">{{ ingredient.stock.expiry_date|date:"d.m.Y" }}</span>
                                 {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Reserved Stock -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stat-card border-0 shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-lock display-4 text-warning mb-3"></i>
-                            <h3 class="card-title">{{ ingredient.stock.reserved_quantity|floatformat:1 }}</h3>
-                            <p class="card-text text-muted">{{ ingredient.unit }}</p>
-                            <p class="card-text">Zaxira miqdor</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Available Stock -->
-                <div class="col-md-4 mb-3">
-                    <div class="card stat-card border-0 shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-check-circle display-4 text-success mb-3"></i>
-                            <h3 class="card-title">
-                                {{ ingredient.stock.current_quantity|add:ingredient.stock.reserved_quantity|floatformat:1 }}
-                            </h3>
-                            <p class="card-text text-muted">{{ ingredient.unit }}</p>
-                            <p class="card-text">Mavjud</p>
+                            {% else %}
+                                <span class="text-muted">Belgilanmagan</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
                 {% else %}
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-exclamation-triangle display-4 text-warning"></i>
-                            <h5 class="mt-3">Zaxira ma'lumoti mavjud emas</h5>
-                            <p class="text-muted">Bu ingredient uchun zaxira ma'lumoti yaratilmagan.</p>
+                <div class="text-center py-3">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2">Stock ma'lumotlari mavjud emas</p>
+                    <a href="{% url 'inventory:stock_update' ingredient.id %}" class="btn btn-sm btn-success">
+                        Stock yaratish
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Thresholds and Cost -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-speedometer me-2"></i>Chegaralar
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Minimal chegara:</label>
+                        <div class="text-warning">{{ ingredient.min_threshold }} {{ ingredient.unit }}</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Maksimal chegara:</label>
+                        <div class="text-info">
+                            {% if ingredient.max_threshold %}
+                                {{ ingredient.max_threshold }} {{ ingredient.unit }}
+                            {% else %}
+                                <span class="text-muted">Belgilanmagan</span>
+                            {% endif %}
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Progress bar -->
+                {% if ingredient.stock and ingredient.max_threshold %}
+                <div class="mt-3">
+                    <label class="form-label small fw-bold">Zaxira darajasi:</label>
+                    <div class="progress" style="height: 20px;">
+                        {% with current=ingredient.stock.current_quantity max=ingredient.max_threshold min=ingredient.min_threshold %}
+                        {% with percentage=current|floatformat:0|add:0 %}
+                        {% with max_percentage=100 %}
+                        {% if current <= min %}
+                            <div class="progress-bar bg-danger" style="width: {{ current|mul:100|div:max }}%">
+                                {{ current }} / {{ max }}
+                            </div>
+                        {% elif current <= max %}
+                            <div class="progress-bar bg-warning" style="width: {{ current|mul:100|div:max }}%">
+                                {{ current }} / {{ max }}
+                            </div>
+                        {% else %}
+                            <div class="progress-bar bg-success" style="width: 100%">
+                                {{ current }} / {{ max }}
+                            </div>
+                        {% endif %}
+                        {% endwith %}
+                        {% endwith %}
+                        {% endwith %}
                     </div>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <!-- Stock Details -->
-    {% if ingredient.stock %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="card-title mb-0">
-                        <i class="bi bi-info-circle"></i> Zaxira Ma'lumotlari
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Minimal chegara</label>
-                                <div class="fw-bold">{{ ingredient.min_threshold }} {{ ingredient.unit }}</div>
-                            </div>
-                        </div>
-                        {% if ingredient.max_threshold %}
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Maksimal chegara</label>
-                                <div class="fw-bold">{{ ingredient.max_threshold }} {{ ingredient.unit }}</div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if ingredient.cost_per_unit %}
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Birlik narxi</label>
-                                <div class="fw-bold">{{ ingredient.cost_per_unit|floatformat:0 }} so'm</div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if ingredient.stock.expiry_date %}
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Muddat tugashi</label>
-                                <div class="fw-bold">
-                                    {% if ingredient.stock.expiry_date < today %}
-                                        <span class="text-danger">{{ ingredient.stock.expiry_date|date:"d.m.Y" }}</span>
-                                    {% else %}
-                                        {{ ingredient.stock.expiry_date|date:"d.m.Y" }}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    {% if ingredient.max_threshold %}
-                    <!-- Stock Level Progress -->
-                    <div class="mt-3">
-                        <label class="form-label text-muted">Zaxira darajasi</label>
-                        {% widthratio ingredient.stock.current_quantity ingredient.max_threshold 100 as progress_width %}
-                        <div class="progress mb-2" style="height: 8px;">
-                            <div class="progress-bar 
-                                {% if ingredient.stock.current_quantity <= ingredient.min_threshold %}bg-danger
-                                {% elif ingredient.stock.current_quantity <= ingredient.min_threshold|add:ingredient.min_threshold %}bg-warning
-                                {% else %}bg-success{% endif %}" 
-                                 role="progressbar" 
-                                 style="width: {{ progress_width }}%">
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <small class="text-muted">0</small>
-                            <small class="text-muted">{{ ingredient.max_threshold }} {{ ingredient.unit }}</small>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-currency-dollar me-2"></i>Moliyaviy ma'lumotlar
+                </h5>
             </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Recent Transactions -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">
-                            <i class="bi bi-clock-history"></i> Oxirgi Tranzaksiyalar
-                        </h6>
-                        <a href="{% url 'inventory:transaction_list' %}?search={{ ingredient.name }}" 
-                           class="btn btn-outline-primary btn-sm">
-                            Barchasini ko'rish
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if transactions %}
-                    <div class="activity-timeline">
-                        {% for transaction in transactions %}
-                        <div class="activity-item">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <span class="transaction-type-{{ transaction.transaction_type }}">
-                                            {{ transaction.get_transaction_type_display }}
-                                        </span>
-                                        <span class="ms-2 fw-bold">
-                                            {{ transaction.quantity }} {{ ingredient.unit }}
-                                        </span>
-                                    </div>
-                                    {% if transaction.supplier %}
-                                    <div class="text-muted small">
-                                        <i class="bi bi-building"></i> {{ transaction.supplier }}
-                                    </div>
-                                    {% endif %}
-                                    {% if transaction.invoice_number %}
-                                    <div class="text-muted small">
-                                        <i class="bi bi-receipt"></i> {{ transaction.invoice_number }}
-                                    </div>
-                                    {% endif %}
-                                    {% if transaction.notes %}
-                                    <div class="text-muted small">
-                                        <i class="bi bi-chat-text"></i> {{ transaction.notes|truncatewords:10 }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                <div class="text-end">
-                                    <div class="text-muted small">
-                                        {{ transaction.created_at|date:"d.m.Y H:i" }}
-                                    </div>
-                                    <div class="text-muted small">
-                                        {{ transaction.created_by.get_full_name|default:transaction.created_by.username }}
-                                    </div>
-                                    {% if transaction.total_cost %}
-                                    <div class="text-muted small">
-                                        {{ transaction.total_cost|floatformat:0 }} so'm
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Birlik narxi:</label>
+                        <div>
+                            {% if ingredient.cost_per_unit %}
+                                <span class="h6 text-success">{{ ingredient.cost_per_unit|floatformat:0 }} so'm</span>
+                            {% else %}
+                                <span class="text-muted">Belgilanmagan</span>
+                            {% endif %}
                         </div>
-                        {% endfor %}
                     </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="bi bi-inbox display-4 text-muted"></i>
-                        <h6 class="mt-3">Tranzaksiyalar mavjud emas</h6>
-                        <p class="text-muted">Bu ingredient uchun hech qanday tranzaksiya amalga oshirilmagan.</p>
-                        {% if user.role.permissions.can_manage_inventory %}
-                        <a href="{% url 'inventory:transaction_create' %}?ingredient={{ ingredient.pk }}" 
-                           class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Birinchi tranzaksiya yaratish
-                        </a>
-                        {% endif %}
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Jami qiymat:</label>
+                        <div>
+                            {% if ingredient.cost_per_unit and ingredient.stock %}
+                                {% with total_value=ingredient.cost_per_unit|mul:ingredient.stock.current_quantity %}
+                                <span class="h6 text-primary">{{ total_value|floatformat:0 }} so'm</span>
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if stats.avg_cost %}
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">O'rtacha xarid narxi:</label>
+                        <div class="text-info">{{ stats.avg_cost|floatformat:0 }} so'm</div>
                     </div>
                     {% endif %}
                 </div>
@@ -359,20 +258,233 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- Statistics -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>So'nggi 30 kun statistikasi
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="border-end">
+                            <h3 class="text-success mb-1">{{ stats.total_in|floatformat:1 }}</h3>
+                            <small class="text-muted">Kirim {{ ingredient.unit }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border-end">
+                            <h3 class="text-danger mb-1">{{ stats.total_out|floatformat:1 }}</h3>
+                            <small class="text-muted">Chiqim {{ ingredient.unit }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="text-info mb-1">{{ stats.avg_cost|floatformat:0 }}</h3>
+                        <small class="text-muted">O'rtacha narx so'm</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-clock-history me-2"></i>So'nggi tranzaksiyalar
+            </h5>
+            <a href="{% url 'inventory:transaction_list' %}?ingredient={{ ingredient.id }}" 
+               class="btn btn-sm btn-outline-primary">
+                Barchasi
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0">Sana</th>
+                            <th class="border-0">Tur</th>
+                            <th class="border-0">Miqdor</th>
+                            <th class="border-0">Narx</th>
+                            <th class="border-0">Supplier</th>
+                            <th class="border-0">Foydalanuvchi</th>
+                            <th class="border-0">Izoh</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>
+                                <div class="small">
+                                    <div>{{ transaction.created_at|date:"d.m.Y" }}</div>
+                                    <small class="text-muted">{{ transaction.created_at|time:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if transaction.transaction_type == 'IN' %}success{% elif transaction.transaction_type == 'OUT' %}danger{% elif transaction.transaction_type == 'WASTE' %}warning{% else %}info{% endif %}">
+                                    {{ transaction.get_transaction_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong class="{% if transaction.transaction_type == 'IN' %}text-success{% elif transaction.transaction_type == 'OUT' %}text-danger{% endif %}">
+                                    {% if transaction.transaction_type == 'OUT' or transaction.transaction_type == 'WASTE' %}-{% endif %}{{ transaction.quantity }} {{ ingredient.unit }}
+                                </strong>
+                            </td>
+                            <td>
+                                {% if transaction.unit_cost %}
+                                    {{ transaction.unit_cost|floatformat:0 }} so'm
+                                    {% if transaction.total_cost %}
+                                    <br><small class="text-muted">Jami: {{ transaction.total_cost|floatformat:0 }} so'm</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if transaction.supplier %}
+                                    {{ transaction.supplier|truncatechars:20 }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ transaction.created_by.get_full_name }}</small>
+                            </td>
+                            <td>
+                                {% if transaction.notes %}
+                                    <small class="text-muted">{{ transaction.notes|truncatechars:30 }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-clock text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-2">Hozircha tranzaksiya yo'q</p>
+                <a href="{% url 'inventory:transaction_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Yangi tranzaksiya
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightning me-2"></i>Tezkor amallar
+                </h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'inventory:transaction_create' %}?ingredient={{ ingredient.id }}&type=IN" 
+                       class="btn btn-sm btn-success">
+                        <i class="bi bi-plus-circle me-1"></i>Kirim
+                    </a>
+                    <a href="{% url 'inventory:transaction_create' %}?ingredient={{ ingredient.id }}&type=OUT" 
+                       class="btn btn-sm btn-danger">
+                        <i class="bi bi-dash-circle me-1"></i>Chiqim
+                    </a>
+                    <a href="{% url 'inventory:stock_adjustment' %}?ingredient={{ ingredient.id }}" 
+                       class="btn btn-sm btn-warning">
+                        <i class="bi bi-tools me-1"></i>Tuzatish
+                    </a>
+                    {% if ingredient.is_low_stock %}
+                    <a href="{% url 'inventory:transaction_create' %}?ingredient={{ ingredient.id }}&type=IN&suggested=true" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-up-circle me-1"></i>To'ldirish tavsiyasi
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .badge {
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    
+    code {
+        background-color: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.9rem;
+    }
+    
+    .progress {
+        border-radius: 10px;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+
 <script>
-// Initialize tooltips
-var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
+document.addEventListener('DOMContentLoaded', function() {
+    // Real-time stock updates (agar WebSocket mavjud bo'lsa)
+    // setInterval(updateStockInfo, 30000);
+    
+    function updateStockInfo() {
+        fetch(`/inventory/api/ingredients/{{ ingredient.id }}/stock/`)
+            .then(response => response.json())
+            .then(data => {
+                // Update stock values
+                console.log('Stock updated:', data);
+            })
+            .catch(error => console.error('Stock update error:', error));
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // E: Edit
+        if (e.key === 'e' && !e.ctrlKey && !e.metaKey) {
+            const target = e.target;
+            if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                window.location.href = '{% url "inventory:ingredient_edit" ingredient.id %}';
+            }
+        }
+        
+        // S: Stock update
+        if (e.key === 's' && !e.ctrlKey && !e.metaKey) {
+            const target = e.target;
+            if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                window.location.href = '{% url "inventory:stock_update" ingredient.id %}';
+            }
+        }
+    });
 });
-
-// Auto-refresh data every 5 minutes
-setInterval(function() {
-    // Could implement AJAX refresh for real-time updates
-    // location.reload();
-}, 300000);
 </script>
 {% endblock %}

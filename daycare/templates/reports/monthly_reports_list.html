@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+
+{% block title %}Oylik hisobotlar{% endblock %}
+
+{% block page_title %}Oylik hisobotlar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Oylik hisobotlar</h4>
+        <p class="text-muted mb-0">Jami {{ total_reports }} ta hisobot</p>
+    </div>
+    <a href="{% url 'reports:monthly_report_generate' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Yangi hisobot yaratish
+    </a>
+</div>
+
+<!-- Reports Grid -->
+{% if page_obj %}
+<div class="row">
+    {% for report in page_obj %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">{{ report.report_month|date:"F Y" }}</h6>
+                    <small class="text-muted">{{ report.report_month|date:"m.Y" }}</small>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'reports:monthly_report_detail' report.pk %}">
+                            <i class="bi bi-eye me-2"></i>Ko'rish
+                        </a></li>
+                        <li><button class="dropdown-item" onclick="regenerateReport({{ report.pk }})">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Qayta yaratish
+                        </button></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportReport({{ report.pk }}, 'pdf')">
+                            <i class="bi bi-file-pdf me-2"></i>PDF yuklab olish
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportReport({{ report.pk }}, 'excel')">
+                            <i class="bi bi-file-excel me-2"></i>Excel yuklab olish
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Key Metrics -->
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="h5 text-primary mb-0">{{ report.total_meals_served }}</div>
+                        <small class="text-muted">Ovqat</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 text-success mb-0">{{ report.total_portions_served }}</div>
+                        <small class="text-muted">Porsiya</small>
+                    </div>
+                </div>
+
+                <!-- Efficiency Progress -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Samaradorlik</small>
+                        <small class="fw-bold">
+                            {% if report.efficiency_percentage %}
+                            {{ report.efficiency_percentage|floatformat:1 }}%
+                            {% else %}
+                            -
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% if report.efficiency_percentage %}
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar
+                            {% if report.efficiency_percentage >= 85 %}bg-success
+                            {% elif report.efficiency_percentage >= 70 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                             style="width: {{ report.efficiency_percentage }}%"></div>
+                    </div>
+                    {% else %}
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Waste Progress -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Chiqindi</small>
+                        <small class="fw-bold">
+                            {% if report.waste_percentage %}
+                            {{ report.waste_percentage|floatformat:1 }}%
+                            {% else %}
+                            -
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% if report.waste_percentage %}
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar
+                            {% if report.waste_percentage < 5 %}bg-success
+                            {% elif report.waste_percentage < 10 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                             style="width: {{ report.waste_percentage }}%"></div>
+                    </div>
+                    {% else %}
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Cost Info -->
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <div class="fw-bold text-info">{{ report.total_cost|floatformat:0 }}</div>
+                        <small class="text-muted">Jami xarajat (so'm)</small>
+                    </div>
+                    {% if report.cost_per_portion %}
+                    <div class="text-end">
+                        <div class="fw-bold text-secondary">{{ report.cost_per_portion|floatformat:0 }}</div>
+                        <small class="text-muted">So'm/porsiya</small>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Popular Meals -->
+                {% if report.most_popular_meals %}
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Mashhur ovqatlar</h6>
+                    {% for meal in report.most_popular_meals|slice:":3" %}
+                    <div class="d-flex justify-content-between">
+                        <small>{{ meal.name|truncatechars:20 }}</small>
+                        <small class="text-muted">{{ meal.count }} marta</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        {{ report.generated_by.get_full_name }}
+                    </small>
+                    <small class="text-muted">
+                        {{ report.generated_at|date:"d.m.Y" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-calendar-month" style="font-size: 3rem; color: #dee2e6;"></i>
+        <h5 class="mt-3 text-muted">Oylik hisobot topilmadi</h5>
+        <p class="text-muted">Hozircha oylik hisobot yaratilmagan</p>
+        <a href="{% url 'reports:monthly_report_generate' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Birinchi hisobot yaratish
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Oylik hisobotlar sahifalash" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Summary Stats -->
+{% if page_obj %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0">Umumiy statistika</h6>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="h4 text-primary">{{ page_obj|length }}</div>
+                <small class="text-muted">Joriy sahifada hisobotlar</small>
+            </div>
+            <div class="col-md-3">
+                <div class="h4 text-success">{{ total_reports }}</div>
+                <small class="text-muted">Jami hisobotlar</small>
+            </div>
+            <div class="col-md-3">
+                <div class="h4 text-info">
+                    {% if page_obj %}
+                    {{ page_obj.0.report_month|date:"Y" }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </div>
+                <small class="text-muted">Eng so'nggi yil</small>
+            </div>
+            <div class="col-md-3">
+                <div class="h4 text-warning">
+                    {% if page_obj %}
+                    {% with last_report=page_obj|last %}
+                        {% if last_report %}
+                            {{ last_report.report_month|date:"Y" }}
+                        {% endif %}
+                    {% endwith %}
+                    {% else %}
+                    -
+                    {% endif %}
+                </div>
+                <small class="text-muted">Eng eski yil</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function regenerateReport(reportId) {
+    if (confirm('Bu hisobotni qayta yaratishni xohlaysizmi? Mavjud ma\'lumotlar yangilanadi.')) {
+        fetch(`/reports/api/monthly/${reportId}/regenerate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+
+function exportReport(reportId, format) {
+    // Export functionality will be implemented here
+    alert(`${format.toUpperCase()} formatida eksport qilish hozircha ishlab chiqilmoqda`);
+}
+</script>
+{% endblock %}

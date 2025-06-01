@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ meal.name }}{% endblock %}
+
+{% block page_title %}{{ meal.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Main meal info -->
+        <div class="card">
+            {% if meal.photo %}
+            <img src="{{ meal.photo.url }}" class="card-img-top" alt="{{ meal.name }}" 
+                 style="height: 300px; object-fit: cover;">
+            {% endif %}
+            
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">{{ meal.name }}</h4>
+                    {% if meal.category %}
+                    <span class="badge bg-primary">{{ meal.category.name }}</span>
+                    {% endif %}
+                    {% if not meal.is_active %}
+                    <span class="badge bg-secondary">Nofaol</span>
+                    {% endif %}
+                </div>
+                {% if user.is_manager or user.is_admin %}
+                <div class="btn-group">
+                    <a href="{% url 'meals:meal_edit' meal.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i>Tahrirlash
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" 
+                            onclick="deleteMeal({{ meal.pk }}, '{{ meal.name }}')">
+                        <i class="bi bi-trash me-1"></i>O'chirish
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-body">
+                {% if meal.description %}
+                <div class="mb-4">
+                    <h6 class="text-muted">Tavsif</h6>
+                    <p>{{ meal.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Meal stats -->
+                <div class="row text-center mb-4">
+                    {% if meal.preparation_time %}
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="display-6 text-info">{{ meal.preparation_time }}</div>
+                            <small class="text-muted">Tayyorlash (daqiqa)</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if meal.cooking_time %}
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="display-6 text-warning">{{ meal.cooking_time }}</div>
+                            <small class="text-muted">Pishirish (daqiqa)</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="display-6 text-success">{{ meal.difficulty_level }}</div>
+                            <small class="text-muted">Qiyinlik (1-5)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="display-6 text-primary">{{ meal.portions_per_recipe }}</div>
+                            <small class="text-muted">Porsiya soni</small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if meal.calories_per_portion %}
+                <div class="row text-center mb-4">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div class="display-6 text-danger">{{ meal.calories_per_portion|floatformat:0 }}</div>
+                            <small class="text-muted">Kcal / porsiya</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div class="display-6 text-success">{{ cost_per_portion|floatformat:0 }}</div>
+                            <small class="text-muted">So'm / porsiya</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if meal.instructions %}
+                <div class="mb-4">
+                    <h6 class="text-muted">Tayyorlash yo'riqnomasi</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ meal.instructions|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recipe ingredients -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Retsept ingredientlari</h6>
+                {% if user.is_manager or user.is_admin %}
+                <a href="{% url 'meals:recipe_create' %}?meal={{ meal.pk }}" 
+                   class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-plus me-1"></i>Ingredient qo'shish
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if recipe_items %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="50">№</th>
+                                <th>Ingredient</th>
+                                <th>Miqdor</th>
+                                <th>Holat</th>
+                                <th>Narx</th>
+                                {% if user.is_manager or user.is_admin %}
+                                <th width="100">Amallar</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recipe_items %}
+                            <tr>
+                                <td>{{ item.display_order }}</td>
+                                <td>
+                                    <div class="fw-bold">{{ item.ingredient.name }}</div>
+                                    {% if item.notes %}
+                                    <small class="text-muted">{{ item.notes|truncatewords:8 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold">{{ item.quantity_per_portion }}</span>
+                                    <small class="text-muted">{{ item.ingredient.unit }}</small>
+                                </td>
+                                <td>
+                                    {% if item.is_optional %}
+                                    <span class="badge bg-warning">Ixtiyoriy</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Majburiy</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.ingredient.cost_per_unit %}
+                                    <span class="cost-calculation"
+                                          data-cost="{{ item.ingredient.cost_per_unit }}"
+                                          data-quantity="{{ item.quantity_per_portion }}">
+                                        {{ item.ingredient.cost_per_unit|floatformat:0 }}
+                                    </span> so'm
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                {% if user.is_manager or user.is_admin %}
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'meals:recipe_edit' item.pk %}"
+                                           class="btn btn-outline-primary" title="Tahrirlash">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger"
+                                                onclick="deleteRecipe({{ item.pk }}, '{{ item.ingredient.name }}')"
+                                                title="O'chirish">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4">Jami xarajat:</th>
+                                <th>{{ total_cost|floatformat:0 }} so'm</th>
+                                {% if user.is_manager or user.is_admin %}
+                                <th></th>
+                                {% endif %}
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-journal-x text-muted" style="font-size: 2rem;"></i>
+                    <div class="mt-2 text-muted">Retsept ingredientlari yo'q</div>
+                    {% if user.is_manager or user.is_admin %}
+                    <a href="{% url 'meals:recipe_create' %}?meal={{ meal.pk }}"
+                       class="btn btn-success btn-sm mt-2">
+                        <i class="bi bi-plus me-1"></i>Birinchi ingredient qo'shish
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Nutrition info -->
+        {% if nutrition %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Ozuqa qiymati (100g)</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless">
+                    {% if nutrition.calories_per_100g %}
+                    <tr>
+                        <td>Kaloriya:</td>
+                        <td class="fw-bold">{{ nutrition.calories_per_100g|floatformat:1 }} kcal</td>
+                    </tr>
+                    {% endif %}
+                    {% if nutrition.protein_per_100g %}
+                    <tr>
+                        <td>Oqsil:</td>
+                        <td class="fw-bold">{{ nutrition.protein_per_100g|floatformat:1 }} g</td>
+                    </tr>
+                    {% endif %}
+                    {% if nutrition.fat_per_100g %}
+                    <tr>
+                        <td>Yog':</td>
+                        <td class="fw-bold">{{ nutrition.fat_per_100g|floatformat:1 }} g</td>
+                    </tr>
+                    {% endif %}
+                    {% if nutrition.carbs_per_100g %}
+                    <tr>
+                        <td>Uglerod:</td>
+                        <td class="fw-bold">{{ nutrition.carbs_per_100g|floatformat:1 }} g</td>
+                    </tr>
+                    {% endif %}
+                    {% if nutrition.fiber_per_100g %}
+                    <tr>
+                        <td>Tola:</td>
+                        <td class="fw-bold">{{ nutrition.fiber_per_100g|floatformat:1 }} g</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Additional info -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Qo'shimcha ma'lumot</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td>Yaratilgan:</td>
+                        <td>{{ meal.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td>Yaratuvchi:</td>
+                        <td>{{ meal.created_by.get_full_name }}</td>
+                    </tr>
+                    {% if meal.updated_at != meal.created_at %}
+                    <tr>
+                        <td>Yangilangan:</td>
+                        <td>{{ meal.updated_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Tezkor amallar</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'meals:meal_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Ovqatlar ro'yxatiga qaytish
+                    </a>
+                    {% if user.is_manager or user.is_admin %}
+                    <a href="{% url 'meals:recipe_create' %}?meal={{ meal.pk }}"
+                       class="btn btn-outline-success">
+                        <i class="bi bi-plus-circle me-1"></i>Ingredient qo'shish
+                    </a>
+                    <a href="{% url 'meals:meal_edit' meal.pk %}" class="btn btn-primary">
+                        <i class="bi bi-pencil me-1"></i>Ovqatni tahrirlash
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Calculate costs
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.cost-calculation').forEach(function(element) {
+        const cost = parseFloat(element.dataset.cost);
+        const quantity = parseFloat(element.dataset.quantity);
+        if (!isNaN(cost) && !isNaN(quantity)) {
+            const total = Math.round(cost * quantity);
+            element.textContent = total.toLocaleString();
+        }
+    });
+});
+
+function deleteMeal(mealId, mealName) {
+    if (confirm(`"${mealName}" ovqatini o'chirishni xohlaysizmi?`)) {
+        fetch(`/meals/${mealId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{% url "meals:meal_list" %}';
+            } else {
+                alert(data.error || 'Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+
+function deleteRecipe(recipeId, ingredientName) {
+    if (confirm(`"${ingredientName}" ingredientini o'chirishni xohlaysizmi?`)) {
+        fetch(`/meals/recipes/${recipeId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+</script>
+{% endblock %}

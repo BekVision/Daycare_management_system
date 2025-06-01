@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+
+{% block title %}Hisobot eksport qilish{% endblock %}
+
+{% block page_title %}Hisobot eksport qilish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Hisobotni eksport qilish</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- Export Format Selection -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="bi bi-file-earmark me-2"></i>{{ form.export_format.label }}
+                        </label>
+                        <div class="row">
+                            {% for value, label in form.export_format.field.choices %}
+                            <div class="col-md-4">
+                                <div class="card border">
+                                    <div class="card-body text-center">
+                                        <input type="radio" name="{{ form.export_format.name }}"
+                                               value="{{ value }}" id="id_{{ form.export_format.name }}_{{ forloop.counter0 }}"
+                                               class="form-check-input d-none"
+                                               {% if form.export_format.value == value %}checked{% endif %}>
+                                        <label for="id_{{ form.export_format.name }}_{{ forloop.counter0 }}"
+                                               class="form-check-label w-100 cursor-pointer">
+                                            {% if value == 'pdf' %}
+                                            <i class="bi bi-file-pdf text-danger" style="font-size: 2rem;"></i>
+                                            <div class="mt-2 fw-bold">{{ label }}</div>
+                                            <small class="text-muted">Professional formatda yuklash</small>
+                                            {% elif value == 'excel' %}
+                                            <i class="bi bi-file-excel text-success" style="font-size: 2rem;"></i>
+                                            <div class="mt-2 fw-bold">{{ label }}</div>
+                                            <small class="text-muted">Ma'lumotlarni tahlil qilish uchun</small>
+                                            {% elif value == 'csv' %}
+                                            <i class="bi bi-file-csv text-info" style="font-size: 2rem;"></i>
+                                            <div class="mt-2 fw-bold">{{ label }}</div>
+                                            <small class="text-muted">Universal ma'lumot formati</small>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.export_format.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.export_format.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Eksport sozlamalari</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.include_charts }}
+                                        <label class="form-check-label" for="{{ form.include_charts.id_for_label }}">
+                                            <i class="bi bi-bar-chart me-2"></i>{{ form.include_charts.label }}
+                                        </label>
+                                    </div>
+                                    {% if form.include_charts.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.include_charts.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="text-muted">Grafiklar va diagrammalarni qo'shish</small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.include_details }}
+                                        <label class="form-check-label" for="{{ form.include_details.id_for_label }}">
+                                            <i class="bi bi-list-ul me-2"></i>{{ form.include_details.label }}
+                                        </label>
+                                    </div>
+                                    {% if form.include_details.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.include_details.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="text-muted">Batafsil ma'lumotlar va tahlillarni qo'shish</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report Type Selection -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Eksport qilinadigan hisobotlar</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="dailyReports" name="report_types" value="daily" checked>
+                                        <label class="form-check-label" for="dailyReports">
+                                            <i class="bi bi-calendar-day text-primary me-2"></i>Kunlik hisobotlar
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">So'nggi 30 kunlik hisobotlar</small>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="monthlyReports" name="report_types" value="monthly" checked>
+                                        <label class="form-check-label" for="monthlyReports">
+                                            <i class="bi bi-calendar-month text-success me-2"></i>Oylik hisobotlar
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">So'nggi 12 oylik hisobotlar</small>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="ingredientReports" name="report_types" value="ingredient">
+                                        <label class="form-check-label" for="ingredientReports">
+                                            <i class="bi bi-box-seam text-warning me-2"></i>Ingredient hisobotlari
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Ingredient ishlatish ma'lumotlari</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date Range Selection -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Vaqt oralig'i</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="startDate" class="form-label">Boshlanish sanasi</label>
+                                    <input type="date" class="form-control" id="startDate" name="start_date">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="endDate" class="form-label">Tugash sanasi</label>
+                                    <input type="date" class="form-control" id="endDate" name="end_date">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange(7)">
+                                        So'nggi 7 kun
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange(30)">
+                                        So'nggi 30 kun
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange(90)">
+                                        So'nggi 3 oy
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange(365)">
+                                        So'nggi yil
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Information -->
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>Eksport haqida ma'lumot:</h6>
+                        <ul class="mb-0">
+                            <li><strong>PDF:</strong> Professional ko'rinishda, chop etish uchun maqbul</li>
+                            <li><strong>Excel:</strong> Ma'lumotlarni Excel'da tahlil qilish uchun</li>
+                            <li><strong>CSV:</strong> Universal format, boshqa dasturlarda ishlash uchun</li>
+                        </ul>
+                    </div>
+
+                    <!-- Estimated File Size -->
+                    <div class="alert alert-light">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Taxminiy fayl hajmi:</h6>
+                                <div id="estimatedSize" class="text-muted">Formatni tanlang...</div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Tayyor bo'lish vaqti:</h6>
+                                <div id="estimatedTime" class="text-muted">1-3 daqiqa</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'reports:dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="exportBtn">
+                            <span id="exportBtnText">
+                                <i class="bi bi-download me-1"></i>Eksport qilish
+                            </span>
+                            <span id="exportBtnLoading" class="d-none">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Tayyorlanmoqda...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Export History -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">So'nggi eksportlar</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-danger rounded-circle p-2 me-3">
+                                <i class="bi bi-file-pdf text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Oylik hisobot - Dekabr.pdf</div>
+                                <small class="text-muted">2 kun oldin • 2.4 MB</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-success rounded-circle p-2 me-3">
+                                <i class="bi bi-file-excel text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Kunlik ma'lumotlar.xlsx</div>
+                                <small class="text-muted">1 hafta oldin • 1.8 MB</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-info rounded-circle p-2 me-3">
+                                <i class="bi bi-file-csv text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Ingredientlar.csv</div>
+                                <small class="text-muted">2 hafta oldin • 456 KB</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <small class="text-muted">Eksport qilingan fayllar 30 kun saqlanadi</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle format selection
+    const formatRadios = document.querySelectorAll('input[name="export_format"]');
+    formatRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Remove active class from all cards
+            document.querySelectorAll('.card.border').forEach(card => {
+                card.classList.remove('border-primary');
+            });
+
+            // Add active class to selected card
+            this.closest('.card').classList.add('border-primary');
+
+            // Update estimated size
+            updateEstimatedSize(this.value);
+        });
+    });
+
+    // Set initial active format
+    const selectedFormat = document.querySelector('input[name="export_format"]:checked');
+    if (selectedFormat) {
+        selectedFormat.closest('.card').classList.add('border-primary');
+        updateEstimatedSize(selectedFormat.value);
+    }
+
+    // Handle form submission
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const btn = document.getElementById('exportBtn');
+        const btnText = document.getElementById('exportBtnText');
+        const btnLoading = document.getElementById('exportBtnLoading');
+
+        // Disable button and show loading
+        btn.disabled = true;
+        btnText.classList.add('d-none');
+        btnLoading.classList.remove('d-none');
+
+        // Re-enable after timeout (in case of errors)
+        setTimeout(() => {
+            btn.disabled = false;
+            btnText.classList.remove('d-none');
+            btnLoading.classList.add('d-none');
+        }, 30000);
+    });
+
+    // Set default date range to last 30 days
+    setDateRange(30);
+});
+
+function setDateRange(days) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+
+    document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+    document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+
+    // Update active button
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+function updateEstimatedSize(format) {
+    const sizeElement = document.getElementById('estimatedSize');
+    const timeElement = document.getElementById('estimatedTime');
+
+    switch(format) {
+        case 'pdf':
+            sizeElement.textContent = '2-5 MB';
+            timeElement.textContent = '2-4 daqiqa';
+            break;
+        case 'excel':
+            sizeElement.textContent = '1-3 MB';
+            timeElement.textContent = '1-2 daqiqa';
+            break;
+        case 'csv':
+            sizeElement.textContent = '200-800 KB';
+            timeElement.textContent = '30-60 soniya';
+            break;
+        default:
+            sizeElement.textContent = 'Formatni tanlang...';
+            timeElement.textContent = '1-3 daqiqa';
+    }
+}
+</script>
+{% endblock %}

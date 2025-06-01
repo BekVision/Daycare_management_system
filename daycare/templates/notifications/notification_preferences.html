@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+{% block title %}Bildirishnoma sozlamalari{% endblock %}
+
+{% block page_title %}Bildirishnoma sozlamalari{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Bildirishnoma sozlamalari</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- General notification settings -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Umumiy sozlamalar</h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.email_notifications }}
+                                    <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                                        <i class="bi bi-envelope me-2"></i>{{ form.email_notifications.label }}
+                                    </label>
+                                </div>
+                                {% if form.email_notifications.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email_notifications.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">Email orqali bildirishnoma olish</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.sms_notifications }}
+                                    <label class="form-check-label" for="{{ form.sms_notifications.id_for_label }}">
+                                        <i class="bi bi-phone me-2"></i>{{ form.sms_notifications.label }}
+                                    </label>
+                                </div>
+                                {% if form.sms_notifications.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.sms_notifications.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">SMS orqali bildirishnoma olish</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.browser_notifications }}
+                                    <label class="form-check-label" for="{{ form.browser_notifications.id_for_label }}">
+                                        <i class="bi bi-bell me-2"></i>{{ form.browser_notifications.label }}
+                                    </label>
+                                </div>
+                                {% if form.browser_notifications.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.browser_notifications.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">Brauzer orqali bildirishnoma olish</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.notification_frequency.id_for_label }}" class="form-label">
+                                    <i class="bi bi-clock me-2"></i>{{ form.notification_frequency.label }}
+                                </label>
+                                {{ form.notification_frequency }}
+                                {% if form.notification_frequency.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.notification_frequency.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">{{ form.notification_frequency.help_text }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alert types -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Ogohlantirish turlari</h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.low_stock_alerts }}
+                                    <label class="form-check-label" for="{{ form.low_stock_alerts.id_for_label }}">
+                                        <i class="bi bi-box-seam text-warning me-2"></i>{{ form.low_stock_alerts.label }}
+                                    </label>
+                                </div>
+                                {% if form.low_stock_alerts.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.low_stock_alerts.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">Zaxira kam bo'lganda xabar berish</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.waste_alerts }}
+                                    <label class="form-check-label" for="{{ form.waste_alerts.id_for_label }}">
+                                        <i class="bi bi-trash text-danger me-2"></i>{{ form.waste_alerts.label }}
+                                    </label>
+                                </div>
+                                {% if form.waste_alerts.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.waste_alerts.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">Chiqindi ko'p bo'lganda xabar berish</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.meal_alerts }}
+                                    <label class="form-check-label" for="{{ form.meal_alerts.id_for_label }}">
+                                        <i class="bi bi-cup-hot text-success me-2"></i>{{ form.meal_alerts.label }}
+                                    </label>
+                                </div>
+                                {% if form.meal_alerts.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.meal_alerts.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">Ovqat tayyor bo'lganda xabar berish</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.report_alerts }}
+                                    <label class="form-check-label" for="{{ form.report_alerts.id_for_label }}">
+                                        <i class="bi bi-file-earmark-text text-info me-2"></i>{{ form.report_alerts.label }}
+                                    </label>
+                                </div>
+                                {% if form.report_alerts.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.report_alerts.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">Hisobotlar haqida xabar berish</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Threshold settings -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Chegara sozlamalari</h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.low_stock_threshold.id_for_label }}" class="form-label">
+                                    <i class="bi bi-graph-down me-2"></i>{{ form.low_stock_threshold.label }}
+                                </label>
+                                <div class="input-group">
+                                    {{ form.low_stock_threshold }}
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                {% if form.low_stock_threshold.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.low_stock_threshold.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">{{ form.low_stock_threshold.help_text }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'notifications:notification_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>Saqlash
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current settings info -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Joriy sozlamalar</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Faol xizmatlar</h6>
+                        <ul class="list-unstyled">
+                            {% if preference.email_notifications %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Email bildirishnomalar</li>
+                            {% endif %}
+                            {% if preference.browser_notifications %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Brauzer bildirishnomalari</li>
+                            {% endif %}
+                            {% if preference.sms_notifications %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>SMS bildirishnomalar</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Faol ogohlantirishlar</h6>
+                        <ul class="list-unstyled">
+                            {% if preference.low_stock_alerts %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Kam zaxira</li>
+                            {% endif %}
+                            {% if preference.waste_alerts %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Chiqindi</li>
+                            {% endif %}
+                            {% if preference.meal_alerts %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Ovqat</li>
+                            {% endif %}
+                            {% if preference.report_alerts %}
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Hisobotlar</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>So'nggi yangilanish:</strong> {{ preference.updated_at|date:"d.m.Y H:i" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+
+{% block title %}Kam zaxira hisoboti{% endblock %}
+{% block page_title %}Kam zaxira hisoboti{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Kam zaxira hisoboti</h3>
+        <p class="text-muted mb-0">Minimal chegaradan past zaxiraga ega mahsulotlar</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-success" onclick="exportReport()">
+            <i class="bi bi-download me-1"></i>Eksport
+        </button>
+        <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Chop etish
+        </button>
+        <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-danger mb-1">{{ low_stock_ingredients|length }}</h3>
+                <small class="text-muted">Kam zaxira mahsulotlar</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-graph-down text-warning" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-warning mb-1">
+                    {% if low_stock_ingredients %}
+                        {% with max_shortage=low_stock_ingredients.0.shortage %}
+                            {{ max_shortage|floatformat:1 }}
+                        {% endwith %}
+                    {% else %}
+                        0
+                    {% endif %}
+                </h3>
+                <small class="text-muted">Eng katta kamomad</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-info bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-currency-dollar text-info" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-info mb-1">
+                    {% with total_cost=0 %}
+                    {% for item in low_stock_ingredients %}
+                        {% if item.ingredient.cost_per_unit %}
+                            {% with item_cost=0 %}
+                                {% widthratio item.shortage 1 item.ingredient.cost_per_unit as item_cost %}
+                                {% with total_cost=total_cost|add:item_cost %}{% endwith %}
+                            {% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ total_cost|floatformat:0 }}
+                {% endwith %}
+                </h3>
+                <small class="text-muted">To'ldirish narxi (so'm)</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-secondary bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-calendar-event text-secondary" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="text-secondary mb-1">{{ "now"|date:"d.m.Y" }}</h3>
+                <small class="text-muted">Hisobot sanasi</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Banner -->
+{% if low_stock_ingredients %}
+<div class="alert alert-warning border-0 shadow-sm mb-4">
+    <div class="d-flex">
+        <i class="bi bi-exclamation-triangle me-3 mt-1" style="font-size: 1.5rem;"></i>
+        <div>
+            <h5 class="alert-heading mb-2">Diqqat talab qiladi!</h5>
+            <p class="mb-2">
+                {{ low_stock_ingredients|length }} ta mahsulot minimal chegara ostida. 
+                Darhol to'ldirish zarur, aks holda ishlab chiqarish to'xtaishi mumkin.
+            </p>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inventory:transaction_create' %}?type=IN" class="btn btn-warning btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Tezkor to'ldirish
+                </a>
+                <button class="btn btn-outline-warning btn-sm" onclick="generatePurchaseList()">
+                    <i class="bi bi-cart me-1"></i>Xarid ro'yxati
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Low Stock Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-list-ul me-2"></i>Kam zaxira ro'yxati
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 small">Saralash:</label>
+                <select class="form-select form-select-sm" onchange="sortTable(this.value)" style="width: auto;">
+                    <option value="shortage">Kamomad bo'yicha</option>
+                    <option value="name">Nom bo'yicha</option>
+                    <option value="category">Kategoriya bo'yicha</option>
+                    <option value="percentage">Foiz bo'yicha</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if low_stock_ingredients %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="lowStockTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0">№</th>
+                            <th class="border-0">Mahsulot</th>
+                            <th class="border-0">Kategoriya</th>
+                            <th class="border-0">Joriy zaxira</th>
+                            <th class="border-0">Min chegara</th>
+                            <th class="border-0">Kamomad</th>
+                            <th class="border-0">Foiz</th>
+                            <th class="border-0">Taxminiy narx</th>
+                            <th class="border-0">Prioritet</th>
+                            <th class="border-0 text-center">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        {% for item in low_stock_ingredients %}
+                        <tr data-shortage="{{ item.shortage }}" data-name="{{ item.ingredient.name }}" data-category="{{ item.ingredient.category.name }}">
+                            <td>
+                                <span class="badge bg-secondary">{{ forloop.counter }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <div class="fw-bold">
+                                            <a href="{% url 'inventory:ingredient_detail' item.ingredient.id %}" 
+                                               class="text-decoration-none">
+                                                {{ item.ingredient.name }}
+                                            </a>
+                                        </div>
+                                        <small class="text-muted">{{ item.ingredient.unit }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ item.ingredient.category.name }}</span>
+                            </td>
+                            <td>
+                                <span class="text-{% if item.current_stock <= 0 %}danger{% else %}warning{% endif %} fw-bold">
+                                    {{ item.current_stock|floatformat:1 }} {{ item.ingredient.unit }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-info">{{ item.min_threshold|floatformat:1 }} {{ item.ingredient.unit }}</span>
+                            </td>
+                            <td>
+                                <span class="text-danger fw-bold">{{ item.shortage|floatformat:1 }} {{ item.ingredient.unit }}</span>
+                            </td>
+                            <td>
+                                {% widthratio item.current_stock item.min_threshold 100 as percentage %}
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="width: 60px; height: 15px;">
+                                        <div class="progress-bar bg-{% if percentage < 50 %}danger{% elif percentage < 80 %}warning{% else %}success{% endif %}"
+                                             style="width: {{ percentage|floatformat:0 }}%"></div>
+                                    </div>
+                                    <small class="text-{% if percentage < 50 %}danger{% elif percentage < 80 %}warning{% else %}success{% endif %}">
+                                        {{ percentage|floatformat:0 }}%
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if item.ingredient.cost_per_unit %}
+                                    {% widthratio item.shortage 1 item.ingredient.cost_per_unit as cost %}
+                                    <span class="text-primary fw-bold">{{ cost|floatformat:0 }} so'm</span>
+                                    <br><small class="text-muted">{{ item.ingredient.cost_per_unit|floatformat:0 }} so'm/{{ item.ingredient.unit }}</small>
+                                {% else %}
+                                    <span class="text-muted">Belgilanmagan</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.current_stock <= 0 %}
+                                    <span class="badge bg-danger fs-6">Kritik</span>
+                                {% elif item.shortage > item.min_threshold %}
+                                    <span class="badge bg-warning fs-6">Yuqori</span>
+                                {% else %}
+                                    <span class="badge bg-info fs-6">O'rtacha</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inventory:transaction_create' %}?ingredient={{ item.ingredient.id }}&type=IN" 
+                                       class="btn btn-outline-success" title="To'ldirish">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:ingredient_detail' item.ingredient.id %}" 
+                                       class="btn btn-outline-info" title="Ko'rish">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:stock_update' item.ingredient.id %}" 
+                                       class="btn btn-outline-primary" title="Stock yangilash">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-success">Ajoyib!</h5>
+                <p class="text-muted">Hamma mahsulotlar yetarli miqdorda. Kam zaxira mahsulot yo'q.</p>
+                <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-primary">
+                    <i class="bi bi-box me-1"></i>Barcha mahsulotlarni ko'rish
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Purchase Recommendations -->
+{% if low_stock_ingredients %}
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-cart me-2"></i>Xarid tavsiyalari
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <!-- Top Priority Items -->
+            <div class="col-md-6">
+                <h6 class="text-danger">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Birinchi navbat
+                </h6>
+                <div class="list-group list-group-flush">
+                    {% for item in low_stock_ingredients|slice:":3" %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ item.ingredient.name }}</strong>
+                                <br><small class="text-muted">Kerak: {{ item.shortage|floatformat:1 }} {{ item.ingredient.unit }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if item.ingredient.cost_per_unit %}
+                                {% widthratio item.shortage 1 item.ingredient.cost_per_unit as shortage_cost %}
+                                <span class="text-primary fw-bold">{{ shortage_cost|floatformat:0 }} so'm</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Category Summary -->
+            <div class="col-md-6">
+                <h6 class="text-info">
+                    <i class="bi bi-pie-chart me-1"></i>Kategoriya bo'yicha
+                </h6>
+                {% regroup low_stock_ingredients by ingredient.category as category_groups %}
+                {% for category_group in category_groups %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>{{ category_group.grouper.name }}</strong>
+                        <small class="text-muted">({{ category_group.list|length }} ta)</small>
+                    </div>
+                    <span class="badge bg-warning">{{ category_group.list|length }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="mt-4 text-center">
+            <button class="btn btn-success me-2" onclick="generatePurchaseList()">
+                <i class="bi bi-cart-plus me-1"></i>Xarid ro'yxati yaratish
+            </button>
+            <button class="btn btn-outline-primary" onclick="calculateTotalCost()">
+                <i class="bi bi-calculator me-1"></i>Umumiy narxni hisoblash
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .progress {
+        border-radius: 10px;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+    }
+    
+    .badge {
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-1px);
+    }
+    
+    @media print {
+        .btn, .alert .btn {
+            display: none !important;
+        }
+        
+        .card {
+            border: 1px solid #000 !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 5 minutes
+    setInterval(function() {
+        if (document.visibilityState === 'visible') {
+            window.location.reload();
+        }
+    }, 300000);
+});
+
+function sortTable(criteria) {
+    const tbody = document.getElementById('tableBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(criteria) {
+            case 'shortage':
+                aVal = parseFloat(a.dataset.shortage);
+                bVal = parseFloat(b.dataset.shortage);
+                return bVal - aVal; // Descending
+            case 'name':
+                aVal = a.dataset.name.toLowerCase();
+                bVal = b.dataset.name.toLowerCase();
+                return aVal.localeCompare(bVal);
+            case 'category':
+                aVal = a.dataset.category.toLowerCase();
+                bVal = b.dataset.category.toLowerCase();
+                return aVal.localeCompare(bVal);
+            case 'percentage':
+                // Calculate percentage from current/min values
+                const aCurrentCell = a.cells[3].textContent;
+                const aMinCell = a.cells[4].textContent;
+                const bCurrentCell = b.cells[3].textContent;
+                const bMinCell = b.cells[4].textContent;
+                
+                const aCurrent = parseFloat(aCurrentCell.match(/[\d.]+/)[0]);
+                const aMin = parseFloat(aMinCell.match(/[\d.]+/)[0]);
+                const bCurrent = parseFloat(bCurrentCell.match(/[\d.]+/)[0]);
+                const bMin = parseFloat(bMinCell.match(/[\d.]+/)[0]);
+                
+                aVal = aCurrent / aMin;
+                bVal = bCurrent / bMin;
+                return aVal - bVal; // Ascending (worst first)
+            default:
+                return 0;
+        }
+    });
+    
+    // Reorder rows
+    rows.forEach((row, index) => {
+        row.children[0].innerHTML = `<span class="badge bg-secondary">${index + 1}</span>`;
+        tbody.appendChild(row);
+    });
+}
+
+function exportReport() {
+    // Simple CSV export
+    const table = document.getElementById('lowStockTable');
+    let csv = 'Mahsulot,Kategoriya,Joriy zaxira,Min chegara,Kamomad,Foiz,Taxminiy narx\n';
+    
+    Array.from(table.querySelectorAll('tbody tr')).forEach(row => {
+        const cells = Array.from(row.cells).slice(1, -1); // Skip № and Actions columns
+        const rowData = cells.map(cell => {
+            let text = cell.textContent.replace(/\s+/g, ' ').trim();
+            return `"${text}"`;
+        });
+        csv += rowData.join(',') + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kam_zaxira_hisoboti_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function generatePurchaseList() {
+    const items = [];
+    const rows = document.querySelectorAll('#tableBody tr');
+    
+    rows.forEach(row => {
+        const name = row.cells[1].textContent.split('\n')[0].trim();
+        const shortage = row.cells[5].textContent.trim();
+        const unit = row.cells[3].textContent.match(/\w+$/)[0];
+        
+        items.push(`${name}: ${shortage} ${unit}`);
+    });
+    
+    const purchaseList = items.join('\n');
+    
+    // Create a modal or new window with the list
+    const newWindow = window.open('', '_blank', 'width=600,height=400');
+    newWindow.document.write(`
+        <html>
+            <head><title>Xarid ro'yxati</title></head>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>Xarid ro'yxati - ${new Date().toLocaleDateString()}</h2>
+                <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px;">${purchaseList}</pre>
+                <button onclick="window.print()">Chop etish</button>
+                <button onclick="window.close()">Yopish</button>
+            </body>
+        </html>
+    `);
+}
+
+function calculateTotalCost() {
+    let totalCost = 0;
+    const rows = document.querySelectorAll('#tableBody tr');
+    
+    rows.forEach(row => {
+        const costCell = row.cells[7].textContent;
+        const costMatch = costCell.match(/(\d+(?:,\d+)*)\s*so'm/);
+        if (costMatch) {
+            totalCost += parseInt(costMatch[1].replace(/,/g, ''));
+        }
+    });
+    
+    alert(`Jami to'ldirish narxi: ${totalCost.toLocaleString()} so'm`);
+}
+</script>
+{% endblock %}

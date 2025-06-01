@@ -19,9 +19,9 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
-                # Activity log yaratish (faqat core.models mavjud bo'lsa)
+                # Activity log yaratish (faqat common.models mavjud bo'lsa)
                 try:
-                    from core.models import ActivityLog
+                    from apps.common.models import ActivityLog
                     ActivityLog.objects.create(
                         user=user,
                         action='USER_LOGIN',
@@ -32,7 +32,7 @@ def login_view(request):
                         user_agent=request.META.get('HTTP_USER_AGENT')
                     )
                 except ImportError:
-                    pass  # core app hali yaratilmagan
+                    pass  # common app hali yaratilmagan
                 return redirect('accounts:dashboard')
             else:
                 messages.error(request, 'Noto\'g\'ri foydalanuvchi nomi yoki parol')
@@ -45,9 +45,9 @@ def login_view(request):
 @login_required
 def logout_view(request):
     """Foydalanuvchi chiqish"""
-    # Activity log yaratish (faqat core.models mavjud bo'lsa)
+    # Activity log yaratish (faqat common.models mavjud bo'lsa)
     try:
-        from core.models import ActivityLog
+        from apps.common.models import ActivityLog
         ActivityLog.objects.create(
             user=request.user,
             action='USER_LOGOUT',
@@ -58,7 +58,7 @@ def logout_view(request):
             user_agent=request.META.get('HTTP_USER_AGENT')
         )
     except ImportError:
-        pass  # core app hali yaratilmagan
+        pass  # common app hali yaratilmagan
     logout(request)
     messages.success(request, 'Muvaffaqiyatli chiqildi')
     return redirect('accounts:login')
@@ -97,9 +97,8 @@ class UserCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        # Activity log yaratish (faqat core.models mavjud bo'lsa)
         try:
-            from core.models import ActivityLog
+            from apps.common.models import ActivityLog
             ActivityLog.objects.create(
                 user=self.request.user,
                 action='USER_CREATED',
@@ -146,7 +145,7 @@ def dashboard(request):
     # Role ga qarab turli ma'lumotlar ko'rsatish
     if request.user.is_admin():
         try:
-            from core.models import ActivityLog
+            from apps.common.models import ActivityLog
             context['recent_activities'] = ActivityLog.objects.select_related('user')[:10]
         except ImportError:
             context['recent_activities'] = []

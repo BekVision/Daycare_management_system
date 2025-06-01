@@ -1,207 +1,129 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from decimal import Decimal
+
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.paginator import Paginator
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q, F, Sum, Count, Avg, When, Value, Case, IntegerField, CharField, DecimalField
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Q, Sum, F
+from django.core.paginator import Paginator
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-import json
-from datetime import date, timedelta
-
+from datetime import datetime, timedelta
+from apps.accounts.decorators import chef_required, admin_or_manager_required
 from .models import IngredientCategory, Ingredient, Stock, StockTransaction
-from .forms import (
-    IngredientCategoryForm, IngredientForm, StockForm,
-    StockTransactionForm, StockAdjustmentForm, StockSearchForm
-)
+from .forms import (IngredientCategoryForm, IngredientForm, StockForm,
+                    StockTransactionForm, StockAdjustmentForm,
+                    InventorySearchForm, TransactionFilterForm)
+from .utils import log_inventory_activity, check_low_stock, send_stock_alert
+from .forms import StockUpdateForm
 
 
-# ================== DASHBOARD ==================
-@login_required
+@chef_required
 def inventory_dashboard(request):
-    """Inventory asosiy sahifa"""
-    # Asosiy statistikalar
-    total_ingredients = Ingredient.objects.filter(is_active=True).count()
-    total_categories = IngredientCategory.objects.filter(is_active=True).count()
+    """Ombor bosh sahifasi"""
 
-    # Kam zaxira (low stock)
-    low_stock_items = Stock.objects.filter(
-        current_quantity__lte=F('ingredient__min_threshold'),
-        ingredient__is_active=True
-    ).count()
+    # Asosiy statistika
+    stats = {
+        'total_ingredients': Ingredient.objects.filter(is_active=True).count(),
+        'total_categories': IngredientCategory.objects.filter(is_active=True).count(),
+        'low_stock_count': 0,
+        'out_of_stock_count': 0,
+        'expiring_soon_count': 0,
+        'total_value': 0,
+    }
 
-    # Muddati tugagan mahsulotlar
-    expired_items = Stock.objects.filter(
-        expiry_date__lt=date.today(),
-        ingredient__is_active=True
-    ).count()
+    # Kam zaxira va tugagan mahsulotlar
+    for ingredient in Ingredient.objects.filter(is_active=True):
+        if ingredient.is_out_of_stock():
+            stats['out_of_stock_count'] += 1
+        elif ingredient.is_low_stock():
+            stats['low_stock_count'] += 1
 
-    # Oxirgi tranzaksiyalar
+    # Muddati tugayotgan mahsulotlar (7 kun ichida)
+    expiring_stocks = Stock.objects.filter(
+        expiry_date__lte=timezone.now().date() + timedelta(days=7),
+        expiry_date__gte=timezone.now().date()
+    )
+    stats['expiring_soon_count'] = expiring_stocks.count()
+
+    # Jami qiymat (taxminiy)
+    total_value = Decimal('0')
+    for ingredient in Ingredient.objects.filter(is_active=True, cost_per_unit__isnull=False):
+        try:
+            stock_quantity = ingredient.stock.current_quantity
+            # Both values converted to Decimal for safe multiplication
+            quantity_decimal = Decimal(str(stock_quantity)) if not isinstance(stock_quantity,
+                                                                              Decimal) else stock_quantity
+            cost_decimal = Decimal(str(ingredient.cost_per_unit)) if not isinstance(ingredient.cost_per_unit,
+                                                                                    Decimal) else ingredient.cost_per_unit
+
+            total_value += quantity_decimal * cost_decimal
+        except Stock.DoesNotExist:
+            pass
+    stats['total_value'] = total_value
+    # total_value = 0
+    # for ingredient in Ingredient.objects.filter(is_active=True, cost_per_unit__isnull=False):
+    #     try:
+    #         stock_quantity = ingredient.stock.current_quantity
+    #         total_value += stock_quantity * ingredient.cost_per_unit
+    #     except Stock.DoesNotExist:
+    #         pass
+    # stats['total_value'] = total_value
+
+    # So'nggi tranzaksiyalar
     recent_transactions = StockTransaction.objects.select_related(
         'ingredient', 'created_by'
     ).order_by('-created_at')[:10]
 
-    # Eng ko'p ishlatiladigan ingredientlar
-    most_used = StockTransaction.objects.filter(
-        transaction_type='OUT',
-        created_at__gte=timezone.now() - timedelta(days=30)
-    ).values('ingredient__name').annotate(
-        total_used=Sum('quantity')
-    ).order_by('-total_used')[:5]
+    # Kategoriya bo'yicha statistika
+    category_stats = []
+    for category in IngredientCategory.objects.filter(is_active=True):
+        cat_ingredients = category.ingredients.filter(is_active=True)
+        category_stats.append({
+            'category': category,
+            'ingredient_count': cat_ingredients.count(),
+            'low_stock_count': sum(1 for ing in cat_ingredients if ing.is_low_stock()),
+        })
 
     context = {
-        'total_ingredients': total_ingredients,
-        'total_categories': total_categories,
-        'low_stock_items': low_stock_items,
-        'expired_items': expired_items,
+        'stats': stats,
         'recent_transactions': recent_transactions,
-        'most_used': most_used,
+        'category_stats': category_stats,
+        'expiring_stocks': expiring_stocks[:5],
     }
 
     return render(request, 'inventory/dashboard.html', context)
 
 
-# ================== KATEGORY VIEWS ==================
-@login_required
-def category_list(request):
-    """Kategoriyalar ro'yxati"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu sahifaga kirish huquqi yo'q.")
-        return redirect('accounts:dashboard')
-
-    search_query = request.GET.get('search', '')
-    categories = IngredientCategory.objects.all()
-
-    if search_query:
-        categories = categories.filter(
-            Q(name__icontains=search_query) |
-            Q(description__icontains=search_query)
-        )
-
-    categories = categories.order_by('display_order', 'name')
-
-    # Pagination
-    paginator = Paginator(categories, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'page_obj': page_obj,
-        'search_query': search_query,
-    }
-
-    return render(request, 'inventory/category_list.html', context)
-
-
-@login_required
-def category_create(request):
-    """Yangi kategoriya yaratish"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:category_list')
-
-    if request.method == 'POST':
-        form = IngredientCategoryForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Kategoriya muvaffaqiyatli yaratildi.")
-            return redirect('inventory:category_list')
-    else:
-        form = IngredientCategoryForm()
-
-    context = {'form': form, 'title': 'Yangi kategoriya yaratish'}
-    return render(request, 'inventory/category_form.html', context)
-
-
-@login_required
-def category_update(request, pk):
-    """Kategoriyani tahrirlash"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:category_list')
-
-    category = get_object_or_404(IngredientCategory, pk=pk)
-
-    if request.method == 'POST':
-        form = IngredientCategoryForm(request.POST, instance=category)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Kategoriya muvaffaqiyatli yangilandi.")
-            return redirect('inventory:category_list')
-    else:
-        form = IngredientCategoryForm(instance=category)
-
-    context = {
-        'form': form,
-        'category': category,
-        'title': f'"{category.name}" kategoriyasini tahrirlash'
-    }
-    return render(request, 'inventory/category_form.html', context)
-
-
-@login_required
-def category_delete(request, pk):
-    """Kategoriyani o'chirish"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:category_list')
-
-    category = get_object_or_404(IngredientCategory, pk=pk)
-
-    if request.method == 'POST':
-        if category.ingredients.exists():
-            messages.error(request,
-                           "Bu kategoriyada ingredientlar mavjud. Avval ularni o'chiring yoki boshqa kategoriyaga ko'chiring.")
-        else:
-            category_name = category.name
-            category.delete()
-            messages.success(request, f'"{category_name}" kategoriyasi o\'chirildi.')
-        return redirect('inventory:category_list')
-
-    context = {'category': category}
-    return render(request, 'inventory/category_confirm_delete.html', context)
-
-
-# ================== INGREDIENT VIEWS ==================
-@login_required
+@chef_required
 def ingredient_list(request):
     """Ingredientlar ro'yxati"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu sahifaga kirish huquqi yo'q.")
-        return redirect('accounts:dashboard')
-
-    search_form = StockSearchForm(request.GET)
+    form = InventorySearchForm(request.GET)
     ingredients = Ingredient.objects.select_related('category').prefetch_related('stock')
 
-    # Qidirish va filtrlash
-    if search_form.is_valid():
-        search = search_form.cleaned_data.get('search')
-        category = search_form.cleaned_data.get('category')
-        low_stock_only = search_form.cleaned_data.get('low_stock_only')
-        expired_only = search_form.cleaned_data.get('expired_only')
-
+    if form.is_valid():
+        search = form.cleaned_data.get('search')
         if search:
             ingredients = ingredients.filter(
-                Q(name__icontains=search) |
-                Q(description__icontains=search) |
-                Q(barcode__icontains=search)
+                Q(name__icontains=search) | Q(description__icontains=search)
             )
 
+        category = form.cleaned_data.get('category')
         if category:
             ingredients = ingredients.filter(category=category)
 
-        if low_stock_only:
-            ingredients = ingredients.filter(
-                stock__current_quantity__lte=F('min_threshold')
-            )
+        stock_status = form.cleaned_data.get('stock_status')
+        if stock_status == 'available':
+            ingredients = [ing for ing in ingredients if not ing.is_low_stock() and not ing.is_out_of_stock()]
+        elif stock_status == 'low':
+            ingredients = [ing for ing in ingredients if ing.is_low_stock()]
+        elif stock_status == 'out':
+            ingredients = [ing for ing in ingredients if ing.is_out_of_stock()]
 
-        if expired_only:
-            ingredients = ingredients.filter(
-                stock__expiry_date__lt=date.today()
-            )
-
-    ingredients = ingredients.filter(is_active=True).order_by('name')
+        unit = form.cleaned_data.get('unit')
+        if unit:
+            ingredients = ingredients.filter(unit__icontains=unit)
 
     # Pagination
     paginator = Paginator(ingredients, 20)
@@ -209,20 +131,52 @@ def ingredient_list(request):
     page_obj = paginator.get_page(page_number)
 
     context = {
+        'form': form,
         'page_obj': page_obj,
-        'search_form': search_form,
+        'total_count': len(ingredients) if isinstance(ingredients, list) else ingredients.count(),
     }
 
     return render(request, 'inventory/ingredient_list.html', context)
 
 
-@login_required
+@chef_required
+def ingredient_detail(request, ingredient_id):
+    """Ingredient detali"""
+    ingredient = get_object_or_404(Ingredient, id=ingredient_id)
+
+    # So'nggi tranzaksiyalar
+    transactions = ingredient.transactions.select_related('created_by').order_by('-created_at')[:20]
+
+    # Statistika
+    last_30_days = timezone.now().date() - timedelta(days=30)
+    stats = {
+        'total_in': ingredient.transactions.filter(
+            transaction_type='IN',
+            created_at__date__gte=last_30_days
+        ).aggregate(total=Sum('quantity'))['total'] or 0,
+
+        'total_out': ingredient.transactions.filter(
+            transaction_type='OUT',
+            created_at__date__gte=last_30_days
+        ).aggregate(total=Sum('quantity'))['total'] or 0,
+
+        'avg_cost': ingredient.transactions.filter(
+            unit_cost__isnull=False
+        ).aggregate(avg=Avg('unit_cost'))['avg'] or 0,
+    }
+
+    context = {
+        'ingredient': ingredient,
+        'transactions': transactions,
+        'stats': stats,
+    }
+
+    return render(request, 'inventory/ingredient_detail.html', context)
+
+
+@chef_required
 def ingredient_create(request):
     """Yangi ingredient yaratish"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:ingredient_list')
-
     if request.method == 'POST':
         form = IngredientForm(request.POST)
         if form.is_valid():
@@ -230,190 +184,201 @@ def ingredient_create(request):
             ingredient.created_by = request.user
             ingredient.save()
 
-            # Ingredient uchun bo'sh Stock yaratish
-            Stock.objects.create(
+            # Stock yaratish
+            stock, created = Stock.objects.get_or_create(
                 ingredient=ingredient,
-                current_quantity=0,
-                reserved_quantity=0,
-                last_updated_by=request.user
+                defaults={
+                    'current_quantity': 0,
+                    'last_updated': timezone.now()
+                }
+            )
+            # Stock.objects.create(
+            #     ingredient=ingredient,
+            #     last_updated_by=request.user
+            # )
+
+            # Activity log
+            log_inventory_activity(
+                user=request.user,
+                action='INGREDIENT_CREATED',
+                ingredient=ingredient,
+                request=request
             )
 
-            messages.success(request, "Ingredient muvaffaqiyatli yaratildi.")
-            return redirect('inventory:ingredient_list')
+            messages.success(request, f'{ingredient.name} muvaffaqiyatli yaratildi')
+            return redirect('inventory:ingredient_detail', ingredient_id=ingredient.id)
     else:
         form = IngredientForm()
 
-    context = {'form': form, 'title': 'Yangi ingredient yaratish'}
+    context = {
+        'form': form,
+        'title': 'Yangi ingredient qo\'shish'
+    }
     return render(request, 'inventory/ingredient_form.html', context)
 
 
-@login_required
-def ingredient_detail(request, pk):
-    """Ingredient tafsilotlari"""
-    ingredient = get_object_or_404(Ingredient, pk=pk)
-
-    # Oxirgi tranzaksiyalar
-    transactions = StockTransaction.objects.filter(
-        ingredient=ingredient
-    ).select_related('created_by').order_by('-created_at')[:20]
-
-    context = {
-        'ingredient': ingredient,
-        'transactions': transactions,
-    }
-
-    return render(request, 'inventory/ingredient_detail.html', context)
-
-
-@login_required
-def ingredient_update(request, pk):
-    """Ingredientni tahrirlash"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:ingredient_list')
-
-    ingredient = get_object_or_404(Ingredient, pk=pk)
+@chef_required
+def ingredient_edit(request, ingredient_id):
+    """Ingredient tahrirlash"""
+    ingredient = get_object_or_404(Ingredient, id=ingredient_id)
 
     if request.method == 'POST':
         form = IngredientForm(request.POST, instance=ingredient)
         if form.is_valid():
             form.save()
-            messages.success(request, "Ingredient muvaffaqiyatli yangilandi.")
-            return redirect('inventory:ingredient_detail', pk=ingredient.pk)
+
+            # Activity log
+            log_inventory_activity(
+                user=request.user,
+                action='INGREDIENT_UPDATED',
+                ingredient=ingredient,
+                request=request
+            )
+
+            messages.success(request, f'{ingredient.name} muvaffaqiyatli yangilandi')
+            return redirect('inventory:ingredient_detail', ingredient_id=ingredient.id)
     else:
         form = IngredientForm(instance=ingredient)
 
     context = {
         'form': form,
         'ingredient': ingredient,
-        'title': f'"{ingredient.name}" ni tahrirlash'
+        'title': f'{ingredient.name} ni tahrirlash'
     }
     return render(request, 'inventory/ingredient_form.html', context)
 
 
-@login_required
-def ingredient_delete(request, pk):
-    """Ingredientni o'chirish"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:ingredient_list')
-
-    ingredient = get_object_or_404(Ingredient, pk=pk)
+@admin_or_manager_required
+def ingredient_delete(request, ingredient_id):
+    """Ingredient o'chirish"""
+    ingredient = get_object_or_404(Ingredient, id=ingredient_id)
 
     if request.method == 'POST':
         ingredient_name = ingredient.name
-        ingredient.is_active = False  # Soft delete
+        ingredient.is_active = False
         ingredient.save()
-        messages.success(request, f'"{ingredient_name}" ingredienti o\'chirildi.')
+
+        # Activity log
+        log_inventory_activity(
+            user=request.user,
+            action='INGREDIENT_DELETED',
+            ingredient=ingredient,
+            request=request
+        )
+
+        messages.success(request, f'{ingredient_name} o\'chirildi')
         return redirect('inventory:ingredient_list')
 
-    context = {'ingredient': ingredient}
+    context = {
+        'ingredient': ingredient,
+    }
     return render(request, 'inventory/ingredient_confirm_delete.html', context)
 
 
-# ================== STOCK VIEWS ==================
-
-@login_required
-def stock_list(request):
-    """Zaxira ro'yxati"""
-    search_form = StockSearchForm(request.GET)
-    stocks = Stock.objects.select_related('ingredient', 'ingredient__category')
-
-    # Qidirish va filtrlash
-    if search_form.is_valid():
-        search = search_form.cleaned_data.get('search')
-        category = search_form.cleaned_data.get('category')
-        low_stock_only = search_form.cleaned_data.get('low_stock_only')
-        expired_only = search_form.cleaned_data.get('expired_only')
-
-        if search:
-            stocks = stocks.filter(
-                Q(ingredient__name__icontains=search) |
-                Q(ingredient__description__icontains=search)
-            )
-
-        if category:
-            stocks = stocks.filter(ingredient__category=category)
-
-        if low_stock_only:
-            stocks = stocks.filter(
-                current_quantity__lte=F('ingredient__min_threshold')
-            )
-
-        if expired_only:
-            stocks = stocks.filter(expiry_date__lt=date.today())
-
-    stocks = stocks.filter(ingredient__is_active=True).order_by('ingredient__name')
-
-    # Har bir stock uchun total_value hisoblash
-    for stock in stocks:
-        if stock.ingredient.cost_per_unit and stock.current_quantity:
-            stock.total_value = stock.current_quantity * stock.ingredient.cost_per_unit
-        else:
-            stock.total_value = 0
-
-    # Pagination
-    paginator = Paginator(stocks, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'page_obj': page_obj,
-        'search_form': search_form,
-    }
-
-    return render(request, 'inventory/stock_list.html', context)
-
-
-@login_required
-def stock_update(request, pk):
-    """Zaxira ma'lumotlarini yangilash"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:stock_list')
-
-    stock = get_object_or_404(Stock, pk=pk)
+@chef_required
+def stock_update(request, ingredient_id):
+    """Stock yangilash"""
+    ingredient = get_object_or_404(Ingredient, id=ingredient_id)
+    stock, created = Stock.objects.get_or_create(
+        ingredient=ingredient,
+        defaults={'last_updated_by': request.user}
+    )
 
     if request.method == 'POST':
         form = StockForm(request.POST, instance=stock)
         if form.is_valid():
-            updated_stock = form.save(commit=False)
-            updated_stock.last_updated_by = request.user
-            updated_stock.save()
-            messages.success(request, "Zaxira ma'lumotlari yangilandi.")
-            return redirect('inventory:stock_list')
+            stock = form.save(commit=False)
+            stock.last_updated_by = request.user
+            stock.save()
+
+            # Activity log
+            log_inventory_activity(
+                user=request.user,
+                action='STOCK_UPDATED',
+                ingredient=ingredient,
+                request=request
+            )
+
+            messages.success(request, f'{ingredient.name} zaxirasi yangilandi')
+            return redirect('inventory:ingredient_detail', ingredient_id=ingredient.id)
     else:
         form = StockForm(instance=stock)
 
     context = {
         'form': form,
+        'ingredient': ingredient,
         'stock': stock,
-        'title': f'"{stock.ingredient.name}" zaxirasini yangilash'
     }
     return render(request, 'inventory/stock_form.html', context)
 
 
-# ================== TRANSACTION VIEWS ==================
-@login_required
+@chef_required
+def transaction_create(request):
+    """Yangi tranzaksiya yaratish"""
+    if request.method == 'POST':
+        form = StockTransactionForm(request.POST)
+        if form.is_valid():
+            transaction = form.save(commit=False)
+            transaction.created_by = request.user
+            transaction.save()  # save() metodi avtomatik stock ni yangilaydi
+
+            # Activity log
+            log_inventory_activity(
+                user=request.user,
+                action='TRANSACTION_CREATED',
+                ingredient=transaction.ingredient,
+                request=request,
+                extra_data={
+                    'transaction_type': transaction.transaction_type,
+                    'quantity': transaction.quantity
+                }
+            )
+
+            # Kam zaxira ogohlantirishi
+            if transaction.ingredient.is_low_stock():
+                send_stock_alert(transaction.ingredient, 'low_stock')
+
+            messages.success(request, 'Tranzaksiya muvaffaqiyatli yaratildi')
+            return redirect('inventory:transaction_list')
+    else:
+        form = StockTransactionForm()
+
+    context = {
+        'form': form,
+        'title': 'Yangi tranzaksiya'
+    }
+    return render(request, 'inventory/transaction_form.html', context)
+
+
+@chef_required
 def transaction_list(request):
     """Tranzaksiyalar ro'yxati"""
-    search_query = request.GET.get('search', '')
-    transaction_type = request.GET.get('type', '')
+    form = TransactionFilterForm(request.GET)
+    transactions = StockTransaction.objects.select_related('ingredient', 'created_by')
 
-    transactions = StockTransaction.objects.select_related(
-        'ingredient', 'created_by'
-    ).order_by('-created_at')
+    # Filtrlash
+    if form.is_valid():
+        ingredient = form.cleaned_data.get('ingredient')
+        if ingredient:
+            transactions = transactions.filter(ingredient=ingredient)
 
-    if search_query:
-        transactions = transactions.filter(
-            Q(ingredient__name__icontains=search_query) |
-            Q(supplier__icontains=search_query) |
-            Q(invoice_number__icontains=search_query) |
-            Q(notes__icontains=search_query)
-        )
+        transaction_type = form.cleaned_data.get('transaction_type')
+        if transaction_type:
+            transactions = transactions.filter(transaction_type=transaction_type)
 
-    if transaction_type:
-        transactions = transactions.filter(transaction_type=transaction_type)
+        supplier = form.cleaned_data.get('supplier')
+        if supplier:
+            transactions = transactions.filter(supplier__icontains=supplier)
+
+        date_from = form.cleaned_data.get('date_from')
+        if date_from:
+            transactions = transactions.filter(created_at__date__gte=date_from)
+
+        date_to = form.cleaned_data.get('date_to')
+        if date_to:
+            transactions = transactions.filter(created_at__date__lte=date_to)
+
+    transactions = transactions.order_by('-created_at')
 
     # Pagination
     paginator = Paginator(transactions, 25)
@@ -421,208 +386,372 @@ def transaction_list(request):
     page_obj = paginator.get_page(page_number)
 
     context = {
+        'form': form,
         'page_obj': page_obj,
-        'search_query': search_query,
-        'transaction_type': transaction_type,
-        'transaction_types': StockTransaction.TRANSACTION_TYPES,
     }
 
     return render(request, 'inventory/transaction_list.html', context)
 
 
-@login_required
-def transaction_create(request):
-    """Yangi tranzaksiya yaratish"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:transaction_list')
+@chef_required
+def category_list(request):
+    """Kategoriyalar ro'yxati"""
+    categories = IngredientCategory.objects.annotate(
+        ingredient_count=Count('ingredients')
+    ).order_by('display_order', 'name')
 
+    context = {
+        'categories': categories,
+    }
+    return render(request, 'inventory/category_list.html', context)
+
+
+@admin_or_manager_required
+def category_create(request):
+    """Yangi kategoriya yaratish"""
     if request.method == 'POST':
-        form = StockTransactionForm(request.POST)
+        form = IngredientCategoryForm(request.POST)
         if form.is_valid():
-            transaction = form.save(commit=False)
-            transaction.created_by = request.user
-            transaction.save()
+            category = form.save()
 
-            # Stock ni yangilash
-            update_stock_from_transaction(transaction)
+            # Activity log
+            log_inventory_activity(
+                user=request.user,
+                action='CATEGORY_CREATED',
+                request=request,
+                extra_data={'category_name': category.name}
+            )
 
-            messages.success(request, "Tranzaksiya muvaffaqiyatli yaratildi.")
-            return redirect('inventory:transaction_list')
+            messages.success(request, f'{category.name} kategoriyasi yaratildi')
+            return redirect('inventory:category_list')
     else:
-        form = StockTransactionForm()
-
-    context = {'form': form, 'title': 'Yangi tranzaksiya yaratish'}
-    return render(request, 'inventory/transaction_form.html', context)
-
-
-@login_required
-def stock_adjustment(request, ingredient_id):
-    """Zaxira miqdorini sozlash"""
-    if not request.user.role.permissions.can_manage_inventory:
-        messages.error(request, "Sizda bu amalni bajarish huquqi yo'q.")
-        return redirect('inventory:stock_list')
-
-    ingredient = get_object_or_404(Ingredient, pk=ingredient_id)
-    stock = get_object_or_404(Stock, ingredient=ingredient)
-
-    if request.method == 'POST':
-        form = StockAdjustmentForm(request.POST)
-        if form.is_valid():
-            new_quantity = form.cleaned_data['quantity']
-            current_quantity = stock.current_quantity
-            adjustment_quantity = new_quantity - current_quantity
-
-            # Tranzaksiya yaratish
-            transaction = form.save(commit=False)
-            transaction.ingredient = ingredient
-            transaction.quantity = abs(adjustment_quantity)
-            transaction.transaction_type = 'ADJUSTMENT'
-            transaction.created_by = request.user
-            transaction.notes = f"Miqdor {current_quantity} dan {new_quantity} ga o'zgartirildi. Sabab: {form.cleaned_data.get('adjustment_reason', '')}"
-            transaction.save()
-
-            # Stock ni yangilash
-            stock.current_quantity = new_quantity
-            stock.last_updated_by = request.user
-            stock.save()
-
-            messages.success(request, f"Zaxira miqdori muvaffaqiyatli o'zgartirildi.")
-            return redirect('inventory:stock_list')
-    else:
-        form = StockAdjustmentForm(initial={'quantity': stock.current_quantity})
+        form = IngredientCategoryForm()
 
     context = {
         'form': form,
-        'ingredient': ingredient,
-        'stock': stock,
-        'title': f'"{ingredient.name}" zaxirasini sozlash'
+        'title': 'Yangi kategoriya'
+    }
+    return render(request, 'inventory/category_form.html', context)
+
+
+@admin_or_manager_required
+def category_edit(request, category_id):
+    """Kategoriya tahrirlash"""
+    category = get_object_or_404(IngredientCategory, id=category_id)
+
+    if request.method == 'POST':
+        form = IngredientCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+
+            # Activity log
+            log_inventory_activity(
+                user=request.user,
+                action='CATEGORY_UPDATED',
+                request=request,
+                extra_data={'category_name': category.name}
+            )
+
+            messages.success(request, f'{category.name} kategoriyasi yangilandi')
+            return redirect('inventory:category_list')
+    else:
+        form = IngredientCategoryForm(instance=category)
+
+    context = {
+        'form': form,
+        'category': category,
+        'title': f'{category.name} ni tahrirlash'
+    }
+    return render(request, 'inventory/category_form.html', context)
+
+
+@chef_required
+def stock_adjustment(request):
+    """Stock tuzatish"""
+    if request.method == 'POST':
+        form = StockAdjustmentForm(request.POST)
+        if form.is_valid():
+            ingredient = form.cleaned_data['ingredient']
+            new_quantity = form.cleaned_data['new_quantity']
+            reason = form.cleaned_data['reason']
+
+            # Tranzaksiya yaratish
+            transaction = StockTransaction.objects.create(
+                ingredient=ingredient,
+                transaction_type='ADJUSTMENT',
+                quantity=new_quantity,
+                notes=reason,
+                created_by=request.user
+            )
+
+            messages.success(request, f'{ingredient.name} zaxirasi tuzatildi')
+            return redirect('inventory:ingredient_detail', ingredient_id=ingredient.id)
+    else:
+        form = StockAdjustmentForm()
+
+    context = {
+        'form': form,
+        'title': 'Zaxira tuzatish'
     }
     return render(request, 'inventory/stock_adjustment.html', context)
 
 
-# ================== AJAX VIEWS ==================
-@login_required
-@require_http_methods(["GET"])
-def get_ingredient_info(request, ingredient_id):
-    """AJAX: Ingredient ma'lumotlarini olish"""
-    try:
-        ingredient = Ingredient.objects.select_related('stock').get(pk=ingredient_id)
-        data = {
-            'name': ingredient.name,
-            'unit': ingredient.unit,
-            'current_stock': ingredient.stock.current_quantity if hasattr(ingredient, 'stock') else 0,
-            'min_threshold': ingredient.min_threshold,
-            'cost_per_unit': float(ingredient.cost_per_unit) if ingredient.cost_per_unit else 0,
-        }
-        return JsonResponse(data)
-    except Ingredient.DoesNotExist:
-        return JsonResponse({'error': 'Ingredient topilmadi'}, status=404)
+@chef_required
+def low_stock_report(request):
+    """Kam zaxira hisoboti"""
+    low_stock_ingredients = []
 
+    for ingredient in Ingredient.objects.filter(is_active=True):
+        if ingredient.is_low_stock():
+            low_stock_ingredients.append({
+                'ingredient': ingredient,
+                'current_stock': ingredient.available_quantity(),
+                'min_threshold': ingredient.min_threshold,
+                'shortage': ingredient.min_threshold - ingredient.available_quantity(),
+            })
 
-@login_required
-@require_http_methods(["POST"])
-def quick_stock_update(request):
-    """AJAX: Tez zaxira yangilash"""
-    if not request.user.role.permissions.can_manage_inventory:
-        return JsonResponse({'error': 'Ruxsat berilmagan'}, status=403)
-
-    try:
-        data = json.loads(request.body)
-        stock_id = data.get('stock_id')
-        new_quantity = float(data.get('quantity', 0))
-
-        stock = Stock.objects.get(pk=stock_id)
-        old_quantity = stock.current_quantity
-
-        # Stock yangilash
-        stock.current_quantity = new_quantity
-        stock.last_updated_by = request.user
-        stock.save()
-
-        # Tranzaksiya yaratish
-        quantity_diff = new_quantity - old_quantity
-        StockTransaction.objects.create(
-            ingredient=stock.ingredient,
-            transaction_type='ADJUSTMENT',
-            quantity=abs(quantity_diff),
-            notes=f'Tez yangilash: {old_quantity} dan {new_quantity} ga',
-            created_by=request.user
-        )
-
-        return JsonResponse({'success': True, 'message': 'Zaxira yangilandi'})
-
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-
-# ================== HELPER FUNCTIONS ==================
-def update_stock_from_transaction(transaction):
-    """Tranzaksiya asosida zaxirani yangilash"""
-    try:
-        stock = Stock.objects.get(ingredient=transaction.ingredient)
-    except Stock.DoesNotExist:
-        # Agar Stock mavjud bo'lmasa, yangi yaratish
-        stock = Stock.objects.create(
-            ingredient=transaction.ingredient,
-            current_quantity=0,
-            reserved_quantity=0,
-            last_updated_by=transaction.created_by
-        )
-
-    if transaction.transaction_type == 'IN':
-        stock.current_quantity += transaction.quantity
-    elif transaction.transaction_type in ['OUT', 'WASTE']:
-        stock.current_quantity = max(0, stock.current_quantity - transaction.quantity)
-    elif transaction.transaction_type == 'ADJUSTMENT':
-        # Adjustment da quantity yangi qiymat
-        stock.current_quantity = transaction.quantity
-
-    # Oxirgi yangilanish ma'lumotlarini saqlash
-    stock.last_updated_by = transaction.created_by
-    if transaction.expiry_date:
-        stock.expiry_date = transaction.expiry_date
-    if transaction.transaction_type == 'IN':
-        stock.last_restock_date = transaction.created_at.date()
-
-    stock.save()
-
-
-# ================== REPORTS ==================
-@login_required
-def stock_report(request):
-    """Zaxira hisoboti"""
-    if not request.user.role.permissions.can_view_reports:
-        messages.error(request, "Sizda hisobot ko'rish huquqi yo'q.")
-        return redirect('accounts:dashboard')
-
-    # Umumiy statistikalar
-    total_value = Stock.objects.aggregate(
-        total=Sum(F('current_quantity') * F('ingredient__cost_per_unit'))
-    )['total'] or 0
-
-    low_stock_count = Stock.objects.filter(
-        current_quantity__lte=F('ingredient__min_threshold')
-    ).count()
-
-    expired_count = Stock.objects.filter(
-        expiry_date__lt=date.today()
-    ).count()
-
-    # Kategoriya bo'yicha taqsimot
-    category_stats = IngredientCategory.objects.annotate(
-        ingredient_count=Sum('ingredients__stock__current_quantity'),
-        category_value=Sum(
-            F('ingredients__stock__current_quantity') *
-            F('ingredients__cost_per_unit')
-        )
-    ).filter(is_active=True)
+    # Sortlash - eng kam zaxira birinchi
+    low_stock_ingredients.sort(key=lambda x: x['shortage'], reverse=True)
 
     context = {
-        'total_value': total_value,
-        'low_stock_count': low_stock_count,
-        'expired_count': expired_count,
-        'category_stats': category_stats,
+        'low_stock_ingredients': low_stock_ingredients,
+    }
+    return render(request, 'inventory/low_stock_report.html', context)
+
+
+@chef_required
+def expiry_report(request):
+    """Muddati tugayotgan mahsulotlar hisoboti"""
+    today = timezone.now().date()
+
+    # Muddati tugagan
+    expired_stocks = Stock.objects.filter(
+        expiry_date__lt=today,
+        current_quantity__gt=0
+    ).select_related('ingredient')
+
+    # 7 kun ichida tugayotgan
+    expiring_soon = Stock.objects.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=today + timedelta(days=7),
+        current_quantity__gt=0
+    ).select_related('ingredient')
+
+    # 30 kun ichida tugayotgan
+    expiring_month = Stock.objects.filter(
+        expiry_date__gt=today + timedelta(days=7),
+        expiry_date__lte=today + timedelta(days=30),
+        current_quantity__gt=0
+    ).select_related('ingredient')
+
+    context = {
+        'expired_stocks': expired_stocks,
+        'expiring_soon': expiring_soon,
+        'expiring_month': expiring_month,
+    }
+    return render(request, 'inventory/expiry_report.html', context)
+
+
+# API Views
+@chef_required
+def ingredient_api(request):
+    """Ingredient API (AJAX uchun)"""
+    search = request.GET.get('q', '')
+    ingredients = Ingredient.objects.filter(
+        is_active=True,
+        name__icontains=search
+    )[:10]
+
+    data = [
+        {
+            'id': ing.id,
+            'name': ing.name,
+            'unit': ing.unit,
+            'current_stock': ing.available_quantity(),
+            'min_threshold': ing.min_threshold,
+        }
+        for ing in ingredients
+    ]
+
+    return JsonResponse({'ingredients': data})
+
+
+@chef_required
+def stock_status_api(request, ingredient_id):
+    """Ingredient stock holati API"""
+    ingredient = get_object_or_404(Ingredient, id=ingredient_id)
+
+    data = {
+        'ingredient_id': ingredient.id,
+        'name': ingredient.name,
+        'unit': ingredient.unit,
+        'current_stock': ingredient.available_quantity(),
+        'min_threshold': ingredient.min_threshold,
+        'max_threshold': ingredient.max_threshold,
+        'is_low_stock': ingredient.is_low_stock(),
+        'is_out_of_stock': ingredient.is_out_of_stock(),
     }
 
-    return render(request, 'inventory/stock_report.html', context)
+    try:
+        stock = ingredient.stock
+        data.update({
+            'reserved_quantity': stock.reserved_quantity,
+            'expiry_date': stock.expiry_date.isoformat() if stock.expiry_date else None,
+            'last_updated': stock.last_updated.isoformat(),
+        })
+    except Stock.DoesNotExist:
+        pass
+
+    return JsonResponse(data)
+
+
+@admin_or_manager_required
+def stock_list(request):
+    """Barcha stock ma'lumotlarini ko'rsatish"""
+    search_query = request.GET.get('search', '')
+    category_filter = request.GET.get('category', '')
+    status_filter = request.GET.get('status', '')
+
+    # Base queryset
+    stocks = Stock.objects.select_related('ingredient', 'ingredient__category').filter(
+        ingredient__is_active=True
+    )
+
+    # Search filter
+    if search_query:
+        stocks = stocks.filter(
+            Q(ingredient__name__icontains=search_query) |
+            Q(ingredient__barcode__icontains=search_query)
+        )
+
+    # Category filter
+    if category_filter:
+        stocks = stocks.filter(ingredient__category_id=category_filter)
+
+    # Status filter
+    if status_filter == 'low':
+        stocks = stocks.filter(current_quantity__lte=F('ingredient__min_threshold'))
+    elif status_filter == 'out':
+        stocks = stocks.filter(current_quantity=0)
+    elif status_filter == 'normal':
+        stocks = stocks.filter(current_quantity__gt=F('ingredient__min_threshold'))
+
+    # Annotate with calculated fields
+    stocks = stocks.annotate(
+        status=Case(
+            When(current_quantity=0, then=Value('out_of_stock')),
+            When(current_quantity__lte=F('ingredient__min_threshold'), then=Value('low_stock')),
+            default=Value('normal'),
+            output_field=CharField()
+        ),
+        total_value=Case(
+            When(ingredient__cost_per_unit__isnull=False,
+                 then=F('current_quantity') * F('ingredient__cost_per_unit')),
+            default=Value(0),
+            output_field=DecimalField()
+        )
+    ).order_by('ingredient__name')
+
+    # Pagination
+    paginator = Paginator(stocks, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Statistics
+    total_items = stocks.count()
+    low_stock_count = stocks.filter(current_quantity__lte=F('ingredient__min_threshold')).count()
+    out_of_stock_count = stocks.filter(current_quantity=0).count()
+    total_value = stocks.aggregate(
+        total=Sum('total_value', default=0)
+    )['total']
+
+    # Categories for filter
+    from .models import IngredientCategory
+    categories = IngredientCategory.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'category_filter': category_filter,
+        'status_filter': status_filter,
+        'categories': categories,
+        'total_items': total_items,
+        'low_stock_count': low_stock_count,
+        'out_of_stock_count': out_of_stock_count,
+        'total_value': total_value,
+        'title': 'Stock Ma\'lumotlari'
+    }
+
+    return render(request, 'inventory/stock_list.html', context)
+
+
+@admin_or_manager_required
+def stock_detail(request, ingredient_id):
+    """Ingredient stock detallari"""
+    ingredient = get_object_or_404(Ingredient, id=ingredient_id, is_active=True)
+    stock = get_object_or_404(Stock, ingredient=ingredient)
+
+    # Recent transactions
+    recent_transactions = StockTransaction.objects.filter(
+        ingredient=ingredient
+    ).select_related('created_by').order_by('-created_at')[:10]
+
+    context = {
+        'ingredient': ingredient,
+        'stock': stock,
+        'recent_transactions': recent_transactions,
+        'title': f'{ingredient.name} - Stock Ma\'lumotlari'
+    }
+
+    return render(request, 'inventory/stock_detail.html', context)
+
+
+# @admin_or_manager_required
+# def stock_update(request, ingredient_id):
+#     """Stock yangilash"""
+#     ingredient = get_object_or_404(Ingredient, id=ingredient_id, is_active=True)
+#     stock, created = Stock.objects.get_or_create(ingredient=ingredient)
+#
+#     if request.method == 'POST':
+#         form = StockUpdateForm(request.POST, instance=stock)
+#         if form.is_valid():
+#             old_quantity = stock.current_quantity
+#             stock = form.save()
+#
+#             quantity_change = stock.current_quantity - old_quantity
+#             transaction_type = 'STOCK_IN' if quantity_change > 0 else 'STOCK_OUT'
+#
+#             StockTransaction.objects.create(
+#                 ingredient=ingredient,
+#                 transaction_type=transaction_type,
+#                 quantity=abs(quantity_change),
+#                 notes=f"Stock yangilandi: {old_quantity} → {stock.current_quantity}",
+#                 created_by=request.user
+#             )
+#
+#             # Activity log
+#             log_inventory_activity(
+#                 user=request.user,
+#                 action='STOCK_UPDATED',
+#                 ingredient=ingredient,
+#                 details={
+#                     'old_quantity': old_quantity,
+#                     'new_quantity': stock.current_quantity,
+#                     'change': quantity_change
+#                 },
+#                 request=request
+#             )
+#
+#             messages.success(request, f'{ingredient.name} stock muvaffaqiyatli yangilandi')
+#             return redirect('inventory:stock_detail', ingredient_id=ingredient.id)
+#     else:
+#         form = StockUpdateForm(instance=stock)
+#
+#     context = {
+#         'form': form,
+#         'ingredient': ingredient,
+#         'stock': stock,
+#         'title': f'{ingredient.name} - Stock Yangilash'
+#     }
+#
+#     return render(request, 'inventory/stock_update.html', context)

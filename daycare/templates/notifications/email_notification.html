@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ notification.title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .priority-urgent { border-left: 4px solid #dc3545; }
+        .priority-high { border-left: 4px solid #ffc107; }
+        .priority-medium { border-left: 4px solid #0d6efd; }
+        .priority-low { border-left: 4px solid #6c757d; }
+        .content {
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .footer {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0d6efd;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header priority-{{ notification.priority|lower }}">
+        <h2>{{ notification.title }}</h2>
+        <p><strong>Turi:</strong> {{ notification.get_type_display }}</p>
+        <p><strong>Muhimlik:</strong> {{ notification.get_priority_display }}</p>
+        <p><strong>Sana:</strong> {{ notification.created_at|date:"d.m.Y H:i" }}</p>
+    </div>
+
+    <div class="content">
+        <p>Hurmatli {{ user.get_full_name }},</p>
+
+        <p>{{ notification.message|linebreaks }}</p>
+
+        {% if notification.data %}
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <h4>Qo'shimcha ma'lumot:</h4>
+            <ul>
+                {% for key, value in notification.data.items %}
+                <li><strong>{{ key|title }}:</strong> {{ value }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if notification.action_url %}
+        <p>
+            <a href="{{ notification.action_url }}" class="btn">Batafsil ko'rish</a>
+        </p>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        <p>Bu bildirishnoma avtomatik ravishda yuborildi.</p>
+        <p>Bildirishnoma sozlamalarini o'zgartirish uchun tizimga kiring.</p>
+        <p><strong>Daycare Management System</strong></p>
+    </div>
+</body>
+</html>

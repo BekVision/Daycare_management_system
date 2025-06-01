@@ -32,3 +32,7 @@ def manager_required(view_func):
 def chef_required(view_func):
     """Chef, manager yoki admin roli talab qiladigan decorator"""
     return role_required(['admin', 'manager', 'chef'])(view_func)
+
+def admin_or_manager_required(view_func):
+   """Admin yoki Manager roli talab qiladigan decorator"""
+   return role_required(['admin', 'manager'])(view_func)

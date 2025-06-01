@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Ingredient Info Card -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-box-seam me-2"></i>{{ ingredient.name }}
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'inventory:stock_update' ingredient.id %}" class="btn btn-success btn-sm">
+                            <i class="bi bi-arrow-repeat me-1"></i>Stock yangilash
+                        </a>
+                        <a href="{% url 'inventory:ingredient_detail' ingredient.id %}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-info-circle me-1"></i>Ingredient ma'lumotlari
+                        </a>
+                        <a href="{% url 'inventory:stock_list' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Basic Info -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-primary border-bottom pb-2">
+                            <i class="bi bi-info-circle me-1"></i>Asosiy ma'lumotlar
+                        </h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted">Kategoriya:</small>
+                                <div><span class="badge bg-primary">{{ ingredient.category.name }}</span></div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Birlik:</small>
+                                <div><strong>{{ ingredient.unit }}</strong></div>
+                            </div>
+                            {% if ingredient.barcode %}
+                            <div class="col-12">
+                                <small class="text-muted">Barcode:</small>
+                                <div><code>{{ ingredient.barcode }}</code></div>
+                            </div>
+                            {% endif %}
+                            {% if ingredient.description %}
+                            <div class="col-12">
+                                <small class="text-muted">Tavsif:</small>
+                                <div>{{ ingredient.description }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="text-success border-bottom pb-2">
+                            <i class="bi bi-speedometer me-1"></i>Zaxira sozlamalari
+                        </h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted">Minimal chegara:</small>
+                                <div><strong class="text-warning">{{ ingredient.min_threshold }} {{ ingredient.unit }}</strong></div>
+                            </div>
+                            {% if ingredient.max_threshold %}
+                            <div class="col-6">
+                                <small class="text-muted">Maksimal chegara:</small>
+                                <div><strong class="text-info">{{ ingredient.max_threshold }} {{ ingredient.unit }}</strong></div>
+                            </div>
+                            {% endif %}
+                            {% if ingredient.cost_per_unit %}
+                            <div class="col-12">
+                                <small class="text-muted">Birlik narxi:</small>
+                                <div><strong class="text-primary">{{ ingredient.cost_per_unit|floatformat:0 }} so'm/{{ ingredient.unit }}</strong></div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Transactions -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>Oxirgi tranzaksiyalar
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sana</th>
+                                <th>Turi</th>
+                                <th>Miqdor</th>
+                                <th>Izoh</th>
+                                <th>Foydalanuvchi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>
+                                    <small>{{ transaction.created_at|date:"d.m.Y" }}</small><br>
+                                    <small class="text-muted">{{ transaction.created_at|date:"H:i" }}</small>
+                                </td>
+                                <td>
+                                    {% if transaction.transaction_type == 'STOCK_IN' %}
+                                        <span class="badge bg-success">Kirish</span>
+                                    {% elif transaction.transaction_type == 'STOCK_OUT' %}
+                                        <span class="badge bg-danger">Chiqish</span>
+                                    {% elif transaction.transaction_type == 'ADJUSTMENT' %}
+                                        <span class="badge bg-warning">Tuzatish</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ transaction.get_transaction_type_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong class="{% if transaction.transaction_type == 'STOCK_IN' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if transaction.transaction_type == 'STOCK_IN' %}+{% else %}-{% endif %}{{ transaction.quantity }} {{ ingredient.unit }}
+                                    </strong>
+                                </td>
+                                <td>
+                                    {% if transaction.notes %}
+                                        {{ transaction.notes|truncatechars:50 }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ transaction.created_by.get_full_name|default:transaction.created_by.username }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clock-history display-4 text-muted"></i>
+                    <h6 class="mt-2 text-muted">Hech qanday tranzaksiya yo'q</h6>
+                    <p class="text-muted">Bu ingredient uchun hali tranzaksiya amalga oshirilmagan.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Status Card -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Joriy holat
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <!-- Current Stock -->
+                <div class="mb-4">
+                    <h2 class="display-4 {% if stock.current_quantity <= ingredient.min_threshold %}text-danger{% elif stock.current_quantity <= ingredient.min_threshold|mul:1.5 %}text-warning{% else %}text-success{% endif %}">
+                        {{ stock.current_quantity }}
+                    </h2>
+                    <p class="text-muted mb-0">{{ ingredient.unit }}</p>
+                    <small class="text-muted">Joriy zaxira</small>
+                </div>
+
+                <!-- Progress Bar -->
+                {% if ingredient.min_threshold > 0 %}
+                    {% widthratio stock.current_quantity ingredient.min_threshold 100 as percentage %}
+                    <div class="progress mb-3" style="height: 15px;">
+                        <div class="progress-bar bg-{% if percentage < 50 %}danger{% elif percentage < 80 %}warning{% else %}success{% endif %}"
+                             style="width: {{ percentage|floatformat:0 }}%"
+                             role="progressbar">
+                            {{ percentage|floatformat:0 }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">Minimal chegaraga nisbatan</small>
+                {% endif %}
+
+                <!-- Status Badge -->
+                <div class="mt-3">
+                    {% if stock.current_quantity == 0 %}
+                        <span class="badge bg-danger p-2">Tugagan</span>
+                    {% elif stock.current_quantity <= ingredient.min_threshold %}
+                        <span class="badge bg-warning p-2">Kam zaxira</span>
+                    {% else %}
+                        <span class="badge bg-success p-2">Normal holat</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Value Card -->
+        {% if ingredient.cost_per_unit %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-currency-dollar me-2"></i>Qiymat ma'lumotlari
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-12">
+                        <small class="text-muted">Jami qiymat</small>
+                        {% widthratio stock.current_quantity 1 ingredient.cost_per_unit as total_value %}
+                        <h4 class="text-primary mb-0">{{ total_value|floatformat:0 }} so'm</h4>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Birlik narxi</small>
+                        <div><strong>{{ ingredient.cost_per_unit|floatformat:0 }} so'm</strong></div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Miqdor</small>
+                        <div><strong>{{ stock.current_quantity }} {{ ingredient.unit }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Last Update -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-clock me-2"></i>Oxirgi yangilanish
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% if stock.last_restock_date %}
+                    <div class="col-12">
+                        <small class="text-muted">Oxirgi to'ldirilgan:</small>
+                        <div><strong>{{ stock.last_restock_date|date:"d.m.Y H:i" }}</strong></div>
+                    </div>
+                    {% endif %}
+                    <div class="col-12">
+                        <small class="text-muted">Ma'lumot yangilangan:</small>
+                        <div><strong>{{ stock.updated_at|date:"d.m.Y H:i" }}</strong></div>
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted">Yaratilgan:</small>
+                        <div><strong>{{ stock.created_at|date:"d.m.Y H:i" }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.display-4 {
+    font-weight: 700;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.card {
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.8rem;
+}
+
+.border-bottom {
+    border-bottom: 2px solid #e9ecef !important;
+}
+</style>
+{% endblock %}

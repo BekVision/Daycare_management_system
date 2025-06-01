@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block title %}Oylik hisobot yaratish{% endblock %}
+
+{% block page_title %}Oylik hisobot yaratish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Yangi oylik hisobot yaratish</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.year.id_for_label }}" class="form-label">
+                                <i class="bi bi-calendar me-2"></i>{{ form.year.label }}
+                            </label>
+                            {{ form.year }}
+                            {% if form.year.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.year.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="{{ form.month.id_for_label }}" class="form-label">
+                                <i class="bi bi-calendar-month me-2"></i>{{ form.month.label }}
+                            </label>
+                            {{ form.month }}
+                            {% if form.month.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.month.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Information Card -->
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>Eslatma:</h6>
+                        <ul class="mb-0">
+                            <li>Oylik hisobot yaratish kunlik hisobotlarga asoslanadi</li>
+                            <li>Agar shu oy uchun hisobot mavjud bo'lsa, u yangilanadi</li>
+                            <li>Hisobot yaratish bir necha daqiqa vaqt olishi mumkin</li>
+                            <li>Faqat o'tgan oylar uchun hisobot yaratish mumkin</li>
+                        </ul>
+                    </div>
+
+                    <!-- Expected Data Preview -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Hisobotga kiradigan ma'lumotlar</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Asosiy ko'rsatkichlar:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Jami xizmat qilingan ovqatlar</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Jami xizmat qilingan porsiyalar</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Umumiy samaradorlik foizi</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Umumiy chiqindi foizi</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Porsiya uchun o'rtacha xarajat</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Tahlil va tavsiyalar:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Eng mashhur ovqatlar ro'yxati</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Kam ishlatilgan ingredientlar</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Xarajat taqsimoti</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Yaxshilash tavsiyalari</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Trend tahlili</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prerequisites Check -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Shart-sharoitlar</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle me-2"></i>Hisobot yaratish uchun zarur:</h6>
+                                <ul class="mb-0">
+                                    <li>Tanlangan oy uchun kamida bitta kunlik hisobot mavjud bo'lishi</li>
+                                    <li>Ovqatlar va ingredientlar ma'lumotlari to'liq bo'lishi</li>
+                                    <li>Zaxira va ishlatish ma'lumotlari kiritilgan bo'lishi</li>
+                                </ul>
+                            </div>
+
+                            <!-- Status indicators would go here if we had data -->
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-success rounded-circle p-1 me-2">
+                                            <i class="bi bi-check text-white small"></i>
+                                        </div>
+                                        <small>Kunlik hisobotlar</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-success rounded-circle p-1 me-2">
+                                            <i class="bi bi-check text-white small"></i>
+                                        </div>
+                                        <small>Ovqatlar ma'lumotlari</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-success rounded-circle p-1 me-2">
+                                            <i class="bi bi-check text-white small"></i>
+                                        </div>
+                                        <small>Ingredientlar ma'lumotlari</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'reports:monthly_reports_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Orqaga
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="generateBtn">
+                            <span id="generateBtnText">
+                                <i class="bi bi-calendar-month me-1"></i>Oylik hisobot yaratish
+                            </span>
+                            <span id="generateBtnLoading" class="d-none">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Yaratilmoqda...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Reports Preview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">So'nggi oylik hisobotlar</h6>
+            </div>
+            <div class="card-body">
+                <!-- Bu qism view'da recent reports ma'lumotlarini yuborish orqali to'ldiriladi -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h5 text-primary mb-2">2024-11</div>
+                            <small class="text-muted">Noyabr</small>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Mavjud</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h5 text-muted mb-2">2024-12</div>
+                            <small class="text-muted">Dekabr</small>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">Yo'q</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h5 text-muted mb-2">2025-01</div>
+                            <small class="text-muted">Yanvar</small>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">Yo'q</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="{% url 'reports:monthly_reports_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-list me-1"></i>Barcha oylik hisobotlarni ko'rish
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">Foydali maslahatlar</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex mb-3">
+                            <div class="text-primary me-3">
+                                <i class="bi bi-lightbulb"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Eng yaxshi vaqt</div>
+                                <small class="text-muted">Oy tugagandan keyin 2-3 kun kutib hisobot yarating</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex mb-3">
+                            <div class="text-success me-3">
+                                <i class="bi bi-graph-up"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Taqqoslash</div>
+                                <small class="text-muted">Oldingi oylar bilan taqqoslash uchun muntazam yarating</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="d-flex mb-3">
+                            <div class="text-info me-3">
+                                <i class="bi bi-share"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Baham ko'rish</div>
+                                <small class="text-muted">Hisobotni PDF yoki Excel formatida eksport qiling</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex mb-3">
+                            <div class="text-warning me-3">
+                                <i class="bi bi-bookmark"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Saqlash</div>
+                                <small class="text-muted">Muhim hisobotlarni arxivlab qo'ying</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const btn = document.getElementById('generateBtn');
+    const btnText = document.getElementById('generateBtnText');
+    const btnLoading = document.getElementById('generateBtnLoading');
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btnText.classList.add('d-none');
+    btnLoading.classList.remove('d-none');
+
+    // Re-enable after form submission (in case of errors)
+    setTimeout(() => {
+        btn.disabled = false;
+        btnText.classList.remove('d-none');
+        btnLoading.classList.add('d-none');
+    }, 60000); // 60 seconds timeout for monthly reports
+});
+
+// Set default values to last month
+document.addEventListener('DOMContentLoaded', function() {
+    const yearSelect = document.querySelector('select[name="year"]');
+    const monthSelect = document.querySelector('select[name="month"]');
+
+    if (!yearSelect.value || !monthSelect.value) {
+        const today = new Date();
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+        if (!yearSelect.value) {
+            yearSelect.value = lastMonth.getFullYear();
+        }
+
+        if (!monthSelect.value) {
+            monthSelect.value = lastMonth.getMonth() + 1;
+        }
+    }
+
+    // Update preview when year/month changes
+    yearSelect.addEventListener('change', updatePreview);
+    monthSelect.addEventListener('change', updatePreview);
+});
+
+function updatePreview() {
+    const year = document.querySelector('select[name="year"]').value;
+    const month = document.querySelector('select[name="month"]').value;
+
+    if (year && month) {
+        // Update the preview section based on selected month
+        console.log(`Selected: ${year}-${month.padStart(2, '0')}`);
+        // Here we could fetch data about whether reports exist for this month
+    }
+}
+</script>
+{% endblock %}

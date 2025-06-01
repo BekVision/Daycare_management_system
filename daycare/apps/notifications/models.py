@@ -1,3 +1,4 @@
+# notifications/models.py
 from django.db import models
 
 
@@ -42,6 +43,7 @@ class Notification(models.Model):
     class Meta:
         verbose_name = "Bildirishnoma"
         verbose_name_plural = "Bildirishnomalar"
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['recipient', 'is_read'], name='idx_notif_rec_read'),
             models.Index(fields=['type', 'created_at'], name='idx_notification_type_created'),

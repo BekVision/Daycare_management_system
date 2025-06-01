@@ -1,117 +1,461 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="h3">{{ title }}</h1>
-            <p class="text-muted">{{ ingredient.name }} uchun zaxira miqdorini sozlash</p>
-        </div>
-    </div>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h6 class="mb-0">
-                        <i class="bi bi-exclamation-triangle"></i> 
-                        Diqqat: Zaxira miqdorini o'zgartirish
-                    </h6>
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-tools me-2"></i>{{ title }}
+                    </h5>
+                    <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
                 </div>
-                <div class="card-body">
-                    <!-- Current Stock Info -->
-                    <div class="alert alert-info">
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="h5 mb-0">{{ stock.current_quantity|floatformat:1 }}</div>
-                                <small>Hozirgi miqdor</small>
+            </div>
+            
+            <div class="card-body">
+                <div class="alert alert-warning border-0 mb-4">
+                    <div class="d-flex">
+                        <i class="bi bi-exclamation-triangle me-2 mt-1"></i>
+                        <div>
+                            <h6 class="alert-heading mb-2">Diqqat!</h6>
+                            <p class="mb-0">
+                                Stock tuzatish zaxira miqdorini to'liq o'zgartiradi. Bu amal qaytarilmaydi.
+                                Aniq miqdorni kiriting va sabab yozing.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="post" id="adjustmentForm">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <!-- Ingredient Selection -->
+                        <div class="col-12">
+                            <label for="{{ form.ingredient.id_for_label }}" class="form-label">
+                                <i class="bi bi-box me-1"></i>Ingredient <span class="text-danger">*</span>
+                            </label>
+                            {{ form.ingredient }}
+                            {% if form.ingredient.errors %}
+                                <div class="text-danger small mt-1">{{ form.ingredient.errors.0 }}</div>
+                            {% endif %}
+                            
+                            <!-- Current Stock Display -->
+                            <div id="currentStockInfo" class="mt-3" style="display: none;">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-3">
+                                        <h6 class="card-title mb-2">
+                                            <i class="bi bi-info-circle me-1"></i>Joriy ma'lumotlar
+                                        </h6>
+                                        <div class="row g-2 small">
+                                            <div class="col-6">
+                                                <strong>Joriy zaxira:</strong>
+                                                <div class="text-primary h6" id="currentStock">-</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <strong>Mavjud:</strong>
+                                                <div class="text-success h6" id="availableStock">-</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <strong>Rezerv:</strong>
+                                                <div class="text-warning" id="reservedStock">-</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <strong>Holat:</strong>
+                                                <div id="stockStatus">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-4">
-                                <div class="h5 mb-0">{{ ingredient.min_threshold|floatformat:1 }}</div>
-                                <small>Minimal chegara</small>
+                        </div>
+                        
+                        <!-- New Quantity -->
+                        <div class="col-12">
+                            <label for="{{ form.new_quantity.id_for_label }}" class="form-label">
+                                <i class="bi bi-123 me-1"></i>Yangi miqdor <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.new_quantity }}
+                                <span class="input-group-text" id="unitDisplay">birlik</span>
                             </div>
-                            <div class="col-4">
-                                <div class="h5 mb-0">{{ ingredient.unit }}</div>
-                                <small>O'lchov birligi</small>
+                            {% if form.new_quantity.errors %}
+                                <div class="text-danger small mt-1">{{ form.new_quantity.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Zaxira yangi qiymatga o'rnatiladi</div>
+                            
+                            <!-- Difference Display -->
+                            <div id="differenceDisplay" class="mt-2" style="display: none;">
+                                <div class="alert alert-info border-0 py-2">
+                                    <small>
+                                        <strong>O'zgarish:</strong> 
+                                        <span id="differenceValue"></span>
+                                        <span id="differenceUnit"></span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Reason -->
+                        <div class="col-12">
+                            <label for="{{ form.reason.id_for_label }}" class="form-label">
+                                <i class="bi bi-chat-text me-1"></i>Tuzatish sababi <span class="text-danger">*</span>
+                            </label>
+                            {{ form.reason }}
+                            {% if form.reason.errors %}
+                                <div class="text-danger small mt-1">{{ form.reason.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Bu ma'lumot tranzaksiya tarixida saqlanadi</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirmation -->
+                    <div class="mt-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmAdjustment" required>
+                            <label class="form-check-label" for="confirmAdjustment">
+                                <strong>Men ushbu tuzatishning natijalarini tushunaman va tasdiqlayamn</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Validation Errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'inventory:ingredient_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-warning" id="submitBtn" disabled>
+                                    <i class="bi bi-tools me-1"></i>Tuzatishni amalga oshirish
+                                </button>
                             </div>
                         </div>
                     </div>
-
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.quantity.id_for_label }}" class="form-label">{{ form.quantity.label }}</label>
-                            {{ form.quantity }}
-                            {% if form.quantity.errors %}
-                                <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
-                            {% endif %}
-                            <div class="form-text">Yangi zaxira miqdorini kiriting</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.adjustment_reason.id_for_label }}" class="form-label">{{ form.adjustment_reason.label }}</label>
-                            {{ form.adjustment_reason }}
-                            {% if form.adjustment_reason.errors %}
-                                <div class="invalid-feedback d-block">{{ form.adjustment_reason.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
-                            {{ form.notes }}
-                            {% if form.notes.errors %}
-                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'inventory:stock_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Orqaga
-                            </a>
-                            <button type="submit" class="btn btn-warning">
-                                <i class="bi bi-gear"></i> Zaxirani O'zgartirish
-                            </button>
-                        </div>
-                    </form>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Adjustment Presets -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightning me-2"></i>Tezkor sozlamalar
+                </h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="setToZero()">
+                            <i class="bi bi-arrow-down me-1"></i>Nolga o'rnatish
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-success btn-sm w-100" onclick="setToThreshold()">
+                            <i class="bi bi-speedometer me-1"></i>Minimal chegaraga
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label class="form-label small">Umumiy sabablar:</label>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setReason('Inventarizatsiya natijasida')">
+                            Inventarizatsiya
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setReason('Chiqindi hisobiga')">
+                            Chiqindi
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setReason('Hisoblash xatosi tuzatildi')">
+                            Hisoblash xatosi
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setReason('Muddati tugagan mahsulot')">
+                            Muddati tugagan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Help Information -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-question-circle me-2"></i>Yordam
+                </h6>
+                <div class="small text-muted">
+                    <ul class="mb-0">
+                        <li>Stock tuzatish avtomatik tranzaksiya yaratadi</li>
+                        <li>Barcha o'zgarishlar qayd qilinadi va kuzatiladi</li>
+                        <li>Sabab kiritish majburiy - bu audit uchun kerak</li>
+                        <li>Rezerv qilingan miqdor o'zgarmaydi</li>
+                        <li>Bu amal qaytarilmaydi - ehtiyot bo'ling</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const quantityInput = document.getElementById('{{ form.quantity.id_for_label }}');
-    const currentQuantity = {{ stock.current_quantity }};
+    const form = document.getElementById('adjustmentForm');
+    const ingredientField = document.querySelector('[name="ingredient"]');
+    const quantityField = document.querySelector('[name="new_quantity"]');
+    const reasonField = document.querySelector('[name="reason"]');
+    const confirmCheckbox = document.getElementById('confirmAdjustment');
+    const submitBtn = document.getElementById('submitBtn');
+    const currentStockInfo = document.getElementById('currentStockInfo');
+    const unitDisplay = document.getElementById('unitDisplay');
+    const differenceDisplay = document.getElementById('differenceDisplay');
     
-    // Real-time difference calculation
-    quantityInput.addEventListener('input', function() {
-        const newQuantity = parseFloat(this.value) || 0;
-        const difference = newQuantity - currentQuantity;
-        
-        // Show difference indicator
-        const diffElement = document.getElementById('quantity-difference');
-        if (!diffElement) {
-            const diffDiv = document.createElement('div');
-            diffDiv.id = 'quantity-difference';
-            diffDiv.className = 'form-text';
-            this.parentNode.appendChild(diffDiv);
-        }
-        
-        const diffEl = document.getElementById('quantity-difference');
-        if (difference > 0) {
-            diffEl.innerHTML = `<span class="text-success">+${difference.toFixed(1)} {{ ingredient.unit }} (ko'payish)</span>`;
-        } else if (difference < 0) {
-            diffEl.innerHTML = `<span class="text-danger">${difference.toFixed(1)} {{ ingredient.unit }} (kamayish)</span>`;
+    let currentIngredientData = null;
+    
+    // Ingredient selection change
+    ingredientField.addEventListener('change', function() {
+        const ingredientId = this.value;
+        if (ingredientId) {
+            // Fetch ingredient stock info
+            fetch(`/inventory/api/ingredients/${ingredientId}/stock/`)
+                .then(response => response.json())
+                .then(data => {
+                    updateIngredientInfo(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching stock info:', error);
+                });
         } else {
-            diffEl.innerHTML = '<span class="text-muted">O\'zgarish yo\'q</span>';
+            currentStockInfo.style.display = 'none';
+            differenceDisplay.style.display = 'none';
+            unitDisplay.textContent = 'birlik';
+            currentIngredientData = null;
         }
     });
+    
+    // Quantity change
+    quantityField.addEventListener('input', function() {
+        calculateDifference();
+        validateForm();
+    });
+    
+    // Reason change
+    reasonField.addEventListener('input', validateForm);
+    
+    // Confirmation checkbox
+    confirmCheckbox.addEventListener('change', validateForm);
+    
+    function updateIngredientInfo(data) {
+        currentIngredientData = data;
+        
+        document.getElementById('currentStock').textContent = `${data.current_stock} ${data.unit}`;
+        document.getElementById('availableStock').textContent = `${data.current_stock - (data.reserved_quantity || 0)} ${data.unit}`;
+        document.getElementById('reservedStock').textContent = `${data.reserved_quantity || 0} ${data.unit}`;
+        
+        // Status
+        let statusHTML;
+        if (data.is_out_of_stock) {
+            statusHTML = '<span class="badge bg-danger">Tugagan</span>';
+        } else if (data.is_low_stock) {
+            statusHTML = '<span class="badge bg-warning">Kam</span>';
+        } else {
+            statusHTML = '<span class="badge bg-success">Yetarli</span>';
+        }
+        document.getElementById('stockStatus').innerHTML = statusHTML;
+        
+        unitDisplay.textContent = data.unit;
+        currentStockInfo.style.display = 'block';
+        
+        calculateDifference();
+    }
+    
+    function calculateDifference() {
+        if (!currentIngredientData || !quantityField.value) {
+            differenceDisplay.style.display = 'none';
+            return;
+        }
+        
+        const currentStock = currentIngredientData.current_stock;
+        const newQuantity = parseFloat(quantityField.value) || 0;
+        const difference = newQuantity - currentStock;
+        
+        const differenceValue = document.getElementById('differenceValue');
+        const differenceUnit = document.getElementById('differenceUnit');
+        
+        if (difference > 0) {
+            differenceValue.textContent = `+${difference.toFixed(2)}`;
+            differenceValue.className = 'text-success fw-bold';
+        } else if (difference < 0) {
+            differenceValue.textContent = difference.toFixed(2);
+            differenceValue.className = 'text-danger fw-bold';
+        } else {
+            differenceValue.textContent = '0';
+            differenceValue.className = 'text-muted';
+        }
+        
+        differenceUnit.textContent = currentIngredientData.unit;
+        differenceDisplay.style.display = 'block';
+    }
+    
+    function validateForm() {
+        const isValid = 
+            ingredientField.value && 
+            quantityField.value && 
+            parseFloat(quantityField.value) >= 0 &&
+            reasonField.value.trim() && 
+            confirmCheckbox.checked;
+        
+        submitBtn.disabled = !isValid;
+    }
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        if (!confirmCheckbox.checked) {
+            e.preventDefault();
+            alert('Iltimos, tuzatishni tasdiqlang!');
+            return;
+        }
+        
+        const newQuantity = parseFloat(quantityField.value) || 0;
+        if (newQuantity < 0) {
+            e.preventDefault();
+            alert('Miqdor noldan kichik bo\'lmasligi kerak!');
+            quantityField.focus();
+            return;
+        }
+        
+        if (!reasonField.value.trim()) {
+            e.preventDefault();
+            alert('Tuzatish sababi kiritilishi kerak!');
+            reasonField.focus();
+            return;
+        }
+        
+        // Final confirmation
+        const currentStock = currentIngredientData ? currentIngredientData.current_stock : 0;
+        const difference = newQuantity - currentStock;
+        
+        let confirmMessage = `Zaxira ${currentStock} dan ${newQuantity} ga o'zgaradi.`;
+        if (Math.abs(difference) > currentStock * 0.5) {
+            confirmMessage += '\n\nBu katta o\'zgarish! Davom etishni xohlaysizmi?';
+        } else {
+            confirmMessage += '\n\nDavom etasizmi?';
+        }
+        
+        if (!confirm(confirmMessage)) {
+            e.preventDefault();
+        }
+    });
+    
+    // URL parameters handling
+    const urlParams = new URLSearchParams(window.location.search);
+    const ingredientParam = urlParams.get('ingredient');
+    
+    if (ingredientParam) {
+        ingredientField.value = ingredientParam;
+        ingredientField.dispatchEvent(new Event('change'));
+    }
+    
+    // Initial validation
+    validateForm();
+});
+
+// Quick action functions
+function setToZero() {
+    const quantityField = document.querySelector('[name="new_quantity"]');
+    quantityField.value = 0;
+    quantityField.dispatchEvent(new Event('input'));
+}
+
+function setToThreshold() {
+    if (!currentIngredientData) {
+        alert('Avval ingredient tanlang!');
+        return;
+    }
+    
+    const quantityField = document.querySelector('[name="new_quantity"]');
+    quantityField.value = currentIngredientData.min_threshold || 0;
+    quantityField.dispatchEvent(new Event('input'));
+}
+
+function setReason(reason) {
+    const reasonField = document.querySelector('[name="reason"]');
+    reasonField.value = reason;
+    reasonField.dispatchEvent(new Event('input'));
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl + S: Submit (if valid)
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        if (!document.getElementById('submitBtn').disabled) {
+            document.getElementById('adjustmentForm').submit();
+        }
+    }
+    
+    // Escape: Cancel
+    if (e.key === 'Escape') {
+        const cancelBtn = document.querySelector('a[href*="ingredient_list"]');
+        if (cancelBtn) cancelBtn.click();
+    }
 });
 </script>
+
+<style>
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-warning {
+        background: linear-gradient(45deg, #ffc107, #ff8f00);
+        border: none;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background: linear-gradient(45deg, #e0a800, #ff6f00);
+        transform: translateY(-1px);
+        color: #212529;
+    }
+    
+    .btn-warning:disabled {
+        background: #6c757d;
+        color: #fff;
+        transform: none;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ced4da;
+        font-weight: 600;
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+</style>
 {% endblock %}

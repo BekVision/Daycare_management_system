@@ -224,7 +224,7 @@ def log_user_activity(user: User, action: str, object_type: str = None,
     """
     Foydalanuvchi faoliyatini loglash
     """
-    from core.models import ActivityLog
+    from apps.common.models import ActivityLog
 
     ip_address = None
     user_agent = None

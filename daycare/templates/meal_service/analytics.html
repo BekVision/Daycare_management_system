@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+
+{% block title %}Xizmat Tahlillari - Bog'cha Ombor Tizimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Xizmat Tahlillari</h2>
+        <p class="text-muted mb-0">
+            <i class="bi bi-calendar3 me-1"></i>{{ start_date|date:"d.m.Y" }} - {{ end_date|date:"d.m.Y" }} (oxirgi 30 kun)
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'meal_service:service_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Xizmatlar ro'yxati
+        </a>
+    </div>
+</div>
+
+<!-- Umumiy statistika -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-graph-up text-primary" style="font-size: 1.5rem;"></i>
+                </div>
+                <h4 class="card-title">{{ active_days }}</h4>
+                <p class="card-text text-muted">Faol kunlar</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-cup-hot text-success" style="font-size: 1.5rem;"></i>
+                </div>
+                <h4 class="card-title">
+                    {{ total_stats.grand_total_served|default:0 }}
+                </h4>
+                <p class="card-text text-muted">Jami berilgan porsiyalar</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-currency-dollar text-info" style="font-size: 1.5rem;"></i>
+                </div>
+                <h4 class="card-title">
+                    {{ total_stats.grand_total_cost|floatformat:0|default:0 }}
+                </h4>
+                <p class="card-text text-muted">Jami xarajat (so'm)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-percent text-warning" style="font-size: 1.5rem;"></i>
+                </div>
+                <h4 class="card-title">{{ overall_efficiency }}%</h4>
+                <p class="card-text text-muted">O'rtacha samaradorlik</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grafiklar -->
+<div class="row g-4 mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Kunlik statistika
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Eng mashhur ovqatlar
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="popularMealsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Eng mashhur ovqatlar jadvali -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-trophy me-2"></i>Top 10 ovqatlar
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if popular_meals %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Ovqat nomi</th>
+                                <th>Berilgan porsiyalar</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meal in popular_meals %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">{{ forloop.counter }}</span>
+                                </td>
+                                <td class="fw-bold">{{ meal.meal__name }}</td>
+                                <td>{{ meal.total_served }}</td>
+                                <td>{{ meal.percentage }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-cup" style="font-size: 2rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2">Ma'lumot yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Oshpazlar bo'yicha statistika -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-people me-2"></i>Oshpazlar statistikasi
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if chef_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Oshpaz</th>
+                                <th>Xizmatlar</th>
+                                <th>Porsiyalar</th>
+                                <th>O'rtacha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for chef in chef_stats %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">
+                                        {% if chef.served_by__first_name %}
+                                            {{ chef.served_by__first_name }} {{ chef.served_by__last_name }}
+                                        {% else %}
+                                            {{ chef.served_by__username }}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ chef.total_services }}</td>
+                                <td>{{ chef.total_served }}</td>
+                                <td>{{ chef.average_per_service }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people" style="font-size: 2rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2">Ma'lumot yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Haftalik trendlar -->
+<div class="card">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0">
+            <i class="bi bi-calendar-week me-2"></i>Haftalik trendlar
+        </h5>
+    </div>
+    <div class="card-body">
+        <canvas id="weeklyTrendChart" height="200"></canvas>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Kunlik statistika grafigi
+const dailyData = {
+    labels: [
+        {% for day in daily_stats %}
+            '{{ day.service_date|date:"d.m" }}'{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ],
+    datasets: [
+        {
+            label: 'Rejalashtirilgan',
+            data: [
+                {% for day in daily_stats %}
+                    {{ day.total_planned|default:0 }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 2,
+            fill: true
+        },
+        {
+            label: 'Berilgan',
+            data: [
+                {% for day in daily_stats %}
+                    {{ day.total_served|default:0 }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            borderColor: 'rgba(40, 167, 69, 1)',
+            borderWidth: 2,
+            fill: true
+        }
+    ]
+};
+
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+new Chart(dailyCtx, {
+    type: 'line',
+    data: dailyData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            intersect: false,
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top'
+            }
+        }
+    }
+});
+
+// Mashhur ovqatlar grafigi
+{% if popular_meals %}
+const popularMealsData = {
+    labels: [
+        {% for meal in popular_meals|slice:":5" %}
+            '{{ meal.meal__name|truncatechars:15 }}'{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ],
+    datasets: [{
+        data: [
+            {% for meal in popular_meals|slice:":5" %}
+                {{ meal.total_served }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        backgroundColor: [
+            '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1'
+        ]
+    }]
+};
+
+const popularMealsCtx = document.getElementById('popularMealsChart').getContext('2d');
+new Chart(popularMealsCtx, {
+    type: 'doughnut',
+    data: popularMealsData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 12,
+                    padding: 10
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Haftalik trend grafigi
+const weeklyTrendData = {
+    labels: [
+        {% for day in daily_stats %}
+            '{{ day.service_date|date:"D" }}'{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ],
+    datasets: [{
+        label: 'Samaradorlik (%)',
+        data: [
+            {% for day in daily_stats %}
+                {{ day.efficiency_percentage }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+        borderColor: 'rgba(255, 193, 7, 1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4
+    }]
+};
+
+const weeklyTrendCtx = document.getElementById('weeklyTrendChart').getContext('2d');
+new Chart(weeklyTrendCtx, {
+    type: 'line',
+    data: weeklyTrendData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

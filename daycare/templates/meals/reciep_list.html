@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block title %}Retseptlar{% endblock %}
+
+{% block page_title %}Retseptlar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Retseptlar</h4>
+        <p class="text-muted mb-0">Jami {{ total_recipes }} ta retsept</p>
+    </div>
+    {% if user.is_manager or user.is_admin %}
+    <a href="{% url 'meals:recipe_create' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i>Yangi retsept
+    </a>
+    {% endif %}
+</div>
+
+<!-- Search and filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Qidiruv</label>
+                <input type="search" name="search" value="{{ search }}" 
+                       class="form-control" placeholder="Ovqat yoki ingredient nomi...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ovqat</label>
+                <select name="meal" class="form-select">
+                    <option value="">Barchasi</option>
+                    {% for meal in meals %}
+                    <option value="{{ meal.pk }}" {% if meal_filter == meal.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ meal.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ingredient</label>
+                <select name="ingredient" class="form-select">
+                    <option value="">Barchasi</option>
+                    {% for ingredient in ingredients %}
+                    <option value="{{ ingredient.pk }}" {% if ingredient_filter == ingredient.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ ingredient.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Qidirish
+                    </button>
+                    {% if search or meal_filter or ingredient_filter %}
+                    <a href="{% url 'meals:recipe_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i>Tozalash
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Recipes table -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ovqat</th>
+                        <th>Ingredient</th>
+                        <th>Miqdor</th>
+                        <th>Tartib</th>
+                        <th>Holat</th>
+                        <th>Izohlar</th>
+                        {% if user.is_manager or user.is_admin %}
+                        <th width="100">Amallar</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recipe in page_obj %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div>
+                                    <div class="fw-bold">{{ recipe.meal.name }}</div>
+                                    {% if recipe.meal.category %}
+                                    <small class="text-muted">{{ recipe.meal.category.name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <span class="fw-bold">{{ recipe.ingredient.name }}</span>
+                                {% if recipe.ingredient.category %}
+                                <small class="text-muted d-block">{{ recipe.ingredient.category.name }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ recipe.quantity_per_portion }}</span>
+                            <small class="text-muted">{{ recipe.ingredient.unit }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ recipe.display_order }}</span>
+                        </td>
+                        <td>
+                            {% if recipe.is_optional %}
+                            <span class="badge bg-warning">Ixtiyoriy</span>
+                            {% else %}
+                            <span class="badge bg-success">Majburiy</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if recipe.notes %}
+                            <div class="text-truncate" style="max-width: 200px;" title="{{ recipe.notes }}">
+                                {{ recipe.notes|truncatewords:8 }}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% if user.is_manager or user.is_admin %}
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'meals:recipe_detail' recipe.pk %}" 
+                                   class="btn btn-outline-info" title="Ko'rish">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'meals:recipe_edit' recipe.pk %}" 
+                                   class="btn btn-outline-primary" title="Tahrirlash">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" 
+                                        onclick="deleteRecipe({{ recipe.pk }}, '{{ recipe.meal.name }}', '{{ recipe.ingredient.name }}')"
+                                        title="O'chirish">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-journal-text" style="font-size: 3rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">Retsept topilmadi</h5>
+            {% if search or meal_filter or ingredient_filter %}
+            <p class="text-muted">Filtrlangan qidiruv natijasi yo'q</p>
+            <a href="{% url 'meals:recipe_list' %}" class="btn btn-outline-primary">
+                Barcha retseptlar
+            </a>
+            {% else %}
+            <p class="text-muted">Hozircha retsept yaratilmagan</p>
+            {% if user.is_manager or user.is_admin %}
+            <a href="{% url 'meals:recipe_create' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle me-1"></i>Birinchi retsept yaratish
+            </a>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Retseptlar sahifalash" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if meal_filter %}&meal={{ meal_filter }}{% endif %}{% if ingredient_filter %}&ingredient={{ ingredient_filter }}{% endif %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if meal_filter %}&meal={{ meal_filter }}{% endif %}{% if ingredient_filter %}&ingredient={{ ingredient_filter }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if meal_filter %}&meal={{ meal_filter }}{% endif %}{% if ingredient_filter %}&ingredient={{ ingredient_filter }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteRecipe(recipeId, mealName, ingredientName) {
+    if (confirm(`"${mealName}" ovqati uchun "${ingredientName}" retseptini o'chirishni xohlaysizmi?`)) {
+        fetch(`/meals/recipes/${recipeId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+</script>
+{% endblock %}

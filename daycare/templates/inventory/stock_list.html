@@ -1,242 +1,304 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Zaxiralar{% endblock %}
-
-{% block extra_css %}
-<style>
-    .stock-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stock-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .stock-level {
-        height: 6px;
-        border-radius: 3px;
-        overflow: hidden;
-    }
-    .status-badge-empty { background-color: #dc3545; color: white; }
-    .status-badge-low { background-color: #ffc107; color: black; }
-    .status-badge-good { background-color: #28a745; color: white; }
-</style>
-{% endblock %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">Zaxiralar</h1>
-                    <p class="text-muted">Barcha ingredient zaxiralarini ko'rish</p>
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-12 mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="card border-0 bg-primary bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h5 class="text-primary">{{ total_items }}</h5>
+                        <small class="text-muted">Jami ingredientlar</small>
+                    </div>
                 </div>
-                {% if user.role.permissions.can_manage_inventory %}
-                <div>
-                    <a href="{% url 'inventory:transaction_create' %}" class="btn btn-success">
-                        <i class="bi bi-plus-circle"></i> Tranzaksiya
-                    </a>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-warning bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h5 class="text-warning">{{ low_stock_count }}</h5>
+                        <small class="text-muted">Kam zaxira</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-danger bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h5 class="text-danger">{{ out_of_stock_count }}</h5>
+                        <small class="text-muted">Tugagan</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-success bg-opacity-10">
+                    <div class="card-body text-center">
+                        <h5 class="text-success">{{ total_value|floatformat:0 }}</h5>
+                        <small class="text-muted">Jami qiymat (so'm)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Qidirish</label>
+                        <input type="text" name="search" class="form-control"
+                               value="{{ search_query }}" placeholder="Ingredient nomi yoki barcode">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kategoriya</label>
+                        <select name="category" class="form-select">
+                            <option value="">Barcha kategoriyalar</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Holat</label>
+                        <select name="status" class="form-select">
+                            <option value="">Barcha holatlar</option>
+                            <option value="normal" {% if status_filter == "normal" %}selected{% endif %}>Normal</option>
+                            <option value="low" {% if status_filter == "low" %}selected{% endif %}>Kam zaxira</option>
+                            <option value="out" {% if status_filter == "out" %}selected{% endif %}>Tugagan</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search"></i> Qidirish
+                        </button>
+                        <a href="{% url 'inventory:stock_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock List -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-boxes me-2"></i>Stock Ma'lumotlari
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                            <i class="bi bi-download me-1"></i>Export
+                        </button>
+                        <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle me-1"></i>Yangi ingredient
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Kategoriya</th>
+                                <th>Joriy zaxira</th>
+                                <th>Holat</th>
+                                <th>Oxirgi yangilanish</th>
+                                <th>Qiymat</th>
+                                <th class="text-end">Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in page_obj %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">{{ stock.ingredient.name }}</h6>
+                                            {% if stock.ingredient.barcode %}
+                                                <small class="text-muted">{{ stock.ingredient.barcode }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ stock.ingredient.category.name }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <strong class="{% if stock.status == 'out_of_stock' %}text-danger{% elif stock.status == 'low_stock' %}text-warning{% else %}text-success{% endif %}">
+                                                {{ stock.current_quantity }} {{ stock.ingredient.unit }}
+                                            </strong>
+                                            <br>
+                                            <small class="text-muted">Min: {{ stock.ingredient.min_threshold }} {{ stock.ingredient.unit }}</small>
+                                        </div>
+                                        {% if stock.ingredient.min_threshold > 0 %}
+                                            {% widthratio stock.current_quantity stock.ingredient.min_threshold 100 as percentage %}
+                                            <div class="progress" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar bg-{% if percentage < 50 %}danger{% elif percentage < 80 %}warning{% else %}success{% endif %}"
+                                                     style="width: {{ percentage|floatformat:0 }}%"></div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if stock.status == 'out_of_stock' %}
+                                        <span class="badge bg-danger">Tugagan</span>
+                                    {% elif stock.status == 'low_stock' %}
+                                        <span class="badge bg-warning">Kam zaxira</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stock.last_restock_date %}
+                                        {{ stock.last_restock_date|date:"d.m.Y" }}
+                                    {% else %}
+                                        <span class="text-muted">Noma'lum</span>
+                                    {% endif %}
+                                </td>
+{#                                <td>#}
+{#                                    {% if stock.last_restock_date %}#}
+{#                                        {{ stock.last_restock_date|date:"d.m.Y H:i" }}#}
+{#                                    {% else %}#}
+{#                                        <span class="text-muted">Noma'lum</span>#}
+{#                                    {% endif %}#}
+{#                                </td>#}
+                                <td>
+                                    {% if stock.ingredient.cost_per_unit %}
+                                        {% widthratio stock.current_quantity 1 stock.ingredient.cost_per_unit as total_value %}
+                                        <strong class="text-primary">{{ total_value|floatformat:0 }} so'm</strong>
+                                        <br>
+                                        <small class="text-muted">{{ stock.ingredient.cost_per_unit|floatformat:0 }} so'm/{{ stock.ingredient.unit }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Belgilanmagan</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+{#                                        <a href="{% url 'inventory:stock_detail' stock.ingredient.id %}"#}
+{#                                           class="btn btn-outline-primary" title="Ko'rish">#}
+{#                                            <i class="bi bi-eye"></i>#}
+{#                                        </a>#}
+                                        <a href="{% url 'inventory:stock_update' stock.ingredient.id %}"
+                                           class="btn btn-outline-success" title="Yangilash">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </a>
+                                        <a href="{% url 'inventory:ingredient_detail' stock.ingredient.id %}"
+                                           class="btn btn-outline-info" title="Ingredient">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer bg-transparent border-0">
+                    <nav aria-label="Stock pagination">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                        <i class="bi bi-chevron-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                        <i class="bi bi-chevron-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h5 class="mt-3 text-muted">Stock ma'lumotlari topilmadi</h5>
+                    <p class="text-muted">Qidiruv shartlaringizni o'zgartirib ko'ring yoki yangi ingredient qo'shing.</p>
                     <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary">
-                        <i class="bi bi-box-seam"></i> Ingredient
+                        <i class="bi bi-plus-circle me-1"></i>Yangi ingredient qo'shish
                     </a>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <!-- Search and Filter -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Qidirish</label>
-                            {{ search_form.search }}
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Kategoriya</label>
-                            {{ search_form.category }}
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="form-check">
-                                {{ search_form.low_stock_only }}
-                                <label class="form-check-label" for="{{ search_form.low_stock_only.id_for_label }}">
-                                    {{ search_form.low_stock_only.label }}
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="form-check">
-                                {{ search_form.expired_only }}
-                                <label class="form-check-label" for="{{ search_form.expired_only.id_for_label }}">
-                                    {{ search_form.expired_only.label }}
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-1">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stock Cards -->
-    <div class="row">
-        {% for stock in page_obj %}
-        <div class="col-xl-4 col-lg-6 mb-4">
-            <div class="card stock-card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h6 class="card-title mb-1">
-                                <a href="{% url 'inventory:ingredient_detail' stock.ingredient.pk %}"
-                                   class="text-decoration-none">
-                                    {{ stock.ingredient.name }}
-                                </a>
-                            </h6>
-                            <small class="text-muted">
-                                <i class="bi bi-tag"></i> {{ stock.ingredient.category.name }}
-                            </small>
-                        </div>
-                        {% if user.role.permissions.can_manage_inventory %}
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-gear"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'inventory:stock_update' stock.pk %}">
-                                        <i class="bi bi-pencil"></i> Yangilash
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'inventory:stock_adjustment' stock.ingredient.pk %}">
-                                        <i class="bi bi-sliders"></i> Miqdor sozlash
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'inventory:transaction_create' %}?ingredient={{ stock.ingredient.pk }}">
-                                        <i class="bi bi-plus-circle"></i> Tranzaksiya qo'shish
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Stock Quantity Display -->
-                    <div class="text-center mb-3">
-                        <div class="h4 mb-0">{{ stock.current_quantity|floatformat:1 }}</div>
-                        <small class="text-muted">{{ stock.ingredient.unit }}</small>
-                    </div>
-
-                    <!-- Stock Level Progress -->
-                    {% if stock.ingredient.max_threshold %}
-                    <div class="mb-3">
-                        {% widthratio stock.current_quantity stock.ingredient.max_threshold 100 as progress %}
-                        <div class="stock-level bg-light">
-                            <div class="h-100
-                                {% if stock.current_quantity <= 0 %}bg-danger
-                                {% elif stock.current_quantity <= stock.ingredient.min_threshold %}bg-warning
-                                {% else %}bg-success{% endif %}"
-                                 style="width: {{ progress|default:0 }}%"></div>
-                        </div>
-                        <div class="d-flex justify-content-between mt-1">
-                            <small class="text-muted">0</small>
-                            <small class="text-muted">{{ stock.ingredient.max_threshold }}</small>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Status Badge -->
-                    <div class="text-center mb-3">
-                        {% if stock.current_quantity <= 0 %}
-                            <span class="badge status-badge-empty">Tugagan</span>
-                        {% elif stock.current_quantity <= stock.ingredient.min_threshold %}
-                            <span class="badge status-badge-low">Kam zaxira</span>
-                        {% else %}
-                            <span class="badge status-badge-good">Yaxshi</span>
-                        {% endif %}
-                    </div>
-
-                    <!-- Additional Information -->
-                    <div class="row text-center small">
-                        <div class="col-4">
-                            <div class="text-muted">Minimal</div>
-                            <div class="fw-medium">{{ stock.ingredient.min_threshold|floatformat:1 }}</div>
-                        </div>
-                        {% if stock.reserved_quantity > 0 %}
-                        <div class="col-4">
-                            <div class="text-muted">Zaxira</div>
-                            <div class="fw-medium">{{ stock.reserved_quantity|floatformat:1 }}</div>
-                        </div>
-                        {% endif %}
-                        {% if stock.ingredient.cost_per_unit %}
-                        <div class="col-4">
-                            <div class="text-muted">Qiymat</div>
-                            <div class="fw-medium">
-                                {{ stock.total_value|floatformat:0 }} so'm
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Card Footer with Dates -->
-                {% if stock.last_restock_date or stock.expiry_date %}
-                <div class="card-footer bg-light border-0">
-                    <div class="row small text-muted">
-                        {% if stock.last_restock_date %}
-                        <div class="col-6">
-                            <i class="bi bi-arrow-up-circle"></i>
-                            To'ldirilgan: {{ stock.last_restock_date|date:"d.m.Y" }}
-                        </div>
-                        {% endif %}
-                        {% if stock.expiry_date %}
-                        <div class="col-6">
-                            <i class="bi bi-calendar-event"></i>
-                            Muddat:
-                            <span {% if stock.expiry_date < today %}class="text-danger"{% endif %}>
-                                {{ stock.expiry_date|date:"d.m.Y" }}
-                            </span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-inbox display-4 text-muted"></i>
-                    <h5 class="mt-3">Zaxiralar topilmadi</h5>
-                    <p class="text-muted">Qidiruv shartlaringizni o'zgartiring yoki yangi ingredient qo'shing.</p>
-                    {% if user.role.permissions.can_manage_inventory %}
-                    <a href="{% url 'inventory:ingredient_create' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Yangi Ingredient Qo'shish
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Pagination -->
-    {% include 'inventory/pagination.html' %}
 </div>
+
+<script>
+function exportData() {
+    // Export functionality
+    window.print();
+}
+
+// Auto-refresh every 5 minutes
+setTimeout(function() {
+    location.reload();
+}, 300000);
+</script>
+
+<style>
+.progress {
+    border-radius: 10px;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
 {% endblock %}

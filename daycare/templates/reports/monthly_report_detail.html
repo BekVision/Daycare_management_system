@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ report.report_month|date:"F Y" }} - Oylik hisobot{% endblock %}
+
+{% block page_title %}{{ report.report_month|date:"F Y" }} - Oylik hisobot{% endblock %}
+
+{% block content %}
+<!-- Report Header -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1">{{ report.report_month|date:"F Y" }}</h4>
+            <small class="text-muted">
+                Yaratuvchi: {{ report.generated_by.get_full_name }} |
+                Yaratilgan: {{ report.generated_at|date:"d.m.Y H:i" }}
+            </small>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-success" onclick="regenerateReport({{ report.pk }})">
+                <i class="bi bi-arrow-clockwise me-1"></i>Qayta yaratish
+            </button>
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-download me-1"></i>Eksport
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')">
+                    <i class="bi bi-file-pdf me-2"></i>PDF
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportReport('excel')">
+                    <i class="bi bi-file-excel me-2"></i>Excel
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportReport('csv')">
+                    <i class="bi bi-file-csv me-2"></i>CSV
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-primary">{{ report.total_meals_served }}</div>
+                <small class="text-muted">Jami ovqatlar</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-success">{{ report.total_portions_served }}</div>
+                <small class="text-muted">Xizmat porsiyalar</small>
+                <div class="mt-1">
+                    <small class="text-muted">{{ report.total_portions_possible }} dan</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.efficiency_percentage %}
+                <div class="display-6
+                    {% if report.efficiency_percentage >= 85 %}text-success
+                    {% elif report.efficiency_percentage >= 70 %}text-warning
+                    {% else %}text-danger{% endif %}">
+                    {{ report.efficiency_percentage|floatformat:1 }}%
+                </div>
+                {% else %}
+                <div class="display-6 text-muted">-</div>
+                {% endif %}
+                <small class="text-muted">Samaradorlik</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.waste_percentage %}
+                <div class="display-6
+                    {% if report.waste_percentage < 5 %}text-success
+                    {% elif report.waste_percentage < 10 %}text-warning
+                    {% else %}text-danger{% endif %}">
+                    {{ report.waste_percentage|floatformat:1 }}%
+                </div>
+                {% else %}
+                <div class="display-6 text-muted">-</div>
+                {% endif %}
+                <small class="text-muted">Chiqindi</small>
+                <div class="mt-1">
+                    <small class="text-muted">{{ report.total_waste|floatformat:1 }} kg</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6 text-info">{{ report.total_cost|floatformat:0 }}</div>
+                <small class="text-muted">Jami xarajat (so'm)</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.cost_per_portion %}
+                <div class="display-6 text-secondary">{{ report.cost_per_portion|floatformat:0 }}</div>
+                <small class="text-muted">So'm/porsiya</small>
+                {% else %}
+                <div class="display-6 text-muted">-</div>
+                <small class="text-muted">So'm/porsiya</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Samaradorlik va chiqindi tahlili</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="efficiencyChart" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Xarajat taqsimoti</h6>
+            </div>
+            <div class="card-body">
+                {% if report.cost_breakdown.by_category %}
+                <canvas id="costChart" height="150"></canvas>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-pie-chart" style="font-size: 2rem;"></i>
+                    <p class="mt-2">Xarajat ma'lumotlari mavjud emas</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Most Popular Meals -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Eng mashhur ovqatlar</h6>
+            </div>
+            <div class="card-body">
+                {% if report.most_popular_meals %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ovqat nomi</th>
+                                <th>Tayyorlangan soni</th>
+                                <th>Xizmat qilingan</th>
+                                <th>Samaradorlik</th>
+                                <th>Popularlik</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meal in report.most_popular_meals %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <div class="fw-bold">{{ meal.name }}</div>
+                                    {% if meal.category %}
+                                    <small class="text-muted">{{ meal.category }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ meal.prepared_count }}</td>
+                                <td>{{ meal.served_count }}</td>
+                                <td>
+                                    {% if meal.efficiency %}
+                                    <span class="badge
+                                        {% if meal.efficiency >= 90 %}bg-success
+                                        {% elif meal.efficiency >= 75 %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ meal.efficiency|floatformat:1 }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px; width: 100px;">
+                                        <div class="progress-bar bg-primary"
+                                             style="width: {{ meal.popularity_percentage }}%">
+                                            {{ meal.popularity_percentage|floatformat:0 }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-cup-hot" style="font-size: 2rem;"></i>
+                    <p class="mt-2">Ovqatlar ma'lumoti mavjud emas</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Least Used Ingredients -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Kam ishlatilgan ingredientlar</h6>
+            </div>
+            <div class="card-body">
+                {% if report.least_used_ingredients %}
+                {% for ingredient in report.least_used_ingredients %}
+                <div class="d-flex justify-content-between align-items-center mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div>
+                        <div class="fw-bold">{{ ingredient.name }}</div>
+                        <small class="text-muted">{{ ingredient.category }}</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-warning">{{ ingredient.usage_count }} marta</div>
+                        <small class="text-muted">{{ ingredient.usage_percentage|floatformat:1 }}%</small>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-box-seam"></i>
+                    <p class="mt-2 mb-0">Ma'lumot yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Performance Summary -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Ishlash xulosasi</h6>
+            </div>
+            <div class="card-body">
+                {% if report.efficiency_percentage %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Samaradorlik</span>
+                        <span class="fw-bold">{{ report.efficiency_percentage|floatformat:1 }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar
+                            {% if report.efficiency_percentage >= 85 %}bg-success
+                            {% elif report.efficiency_percentage >= 70 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                             style="width: {{ report.efficiency_percentage }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if report.waste_percentage %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Chiqindi nazorati</span>
+                        <span class="fw-bold">
+                            {% if report.waste_percentage < 5 %}A'lo
+                            {% elif report.waste_percentage < 10 %}Yaxshi
+                            {% else %}Yomon{% endif %}
+                        </span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar
+                            {% if report.waste_percentage < 5 %}bg-success
+                            {% elif report.waste_percentage < 10 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                             style="width: {% if report.waste_percentage > 20 %}100{% else %}{{ report.waste_percentage|mul:5 }}{% endif %}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="text-center mt-3">
+                    {% if report.efficiency_percentage >= 85 and report.waste_percentage < 5 %}
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-star-fill me-1"></i>Mukammal ishlash
+                    </span>
+                    {% elif report.efficiency_percentage >= 70 and report.waste_percentage < 10 %}
+                    <span class="badge bg-primary fs-6">
+                        <i class="bi bi-thumbs-up me-1"></i>Yaxshi ishlash
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning fs-6">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Yaxshilanish kerak
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations -->
+{% if report.recommendations %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0">Tavsiyalar va yaxshilash yo'llari</h6>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h6><i class="bi bi-lightbulb me-2"></i>Tavsiyalar:</h6>
+            <p class="mb-0">{{ report.recommendations }}</p>
+        </div>
+
+        <!-- Action Items -->
+        <div class="row mt-3">
+            {% if report.efficiency_percentage < 75 %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex">
+                    <div class="text-warning me-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">Samaradorlikni oshirish</div>
+                        <small class="text-muted">Porsiya rejalashtirish va tayyorlash jarayonini qayta ko'rib chiqish</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if report.waste_percentage > 8 %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex">
+                    <div class="text-danger me-3">
+                        <i class="bi bi-trash"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">Chiqindilarni kamaytirish</div>
+                        <small class="text-muted">Ingredient saqlanishi va ishlatish jarayonini yaxshilash</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if report.cost_per_portion and report.cost_per_portion > 5000 %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex">
+                    <div class="text-info me-3">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">Xarajatlarni optimallashtirish</div>
+                        <small class="text-muted">Ta'minot va narxlarni qayta ko'rib chiqish</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Navigation -->
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'reports:monthly_reports_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Oylik hisobotlar ro'yxatiga qaytish
+            </a>
+            <div>
+                <a href="{% url 'reports:monthly_report_generate' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Yangi hisobot yaratish
+                </a>
+                <a href="{% url 'reports:dashboard' %}" class="btn btn-primary">
+                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Efficiency Chart
+    const efficiencyCtx = document.getElementById('efficiencyChart').getContext('2d');
+    new Chart(efficiencyCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Samaradorlik', 'Yo\'qotish'],
+            datasets: [{
+                data: [
+                    {{ report.efficiency_percentage|default:0 }},
+                    {{ 100|sub:report.efficiency_percentage|default:100 }}
+                ],
+                backgroundColor: [
+                    {% if report.efficiency_percentage >= 85 %}'#198754'
+                    {% elif report.efficiency_percentage >= 70 %}'#ffc107'
+                    {% else %}'#dc3545'{% endif %},
+                    '#e9ecef'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Cost Chart
+    {% if report.cost_breakdown.by_category %}
+    const costCtx = document.getElementById('costChart').getContext('2d');
+    new Chart(costCtx, {
+        type: 'pie',
+        data: {
+            labels: [
+                {% for item in report.cost_breakdown.by_category %}
+                '{{ item.category }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for item in report.cost_breakdown.by_category %}
+                    {{ item.amount }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+
+function regenerateReport(reportId) {
+    if (confirm('Bu hisobotni qayta yaratishni xohlaysizmi? Mavjud ma\'lumotlar yangilanadi.')) {
+        fetch(`/reports/api/monthly/${reportId}/regenerate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+
+function exportReport(format) {
+    // Export functionality will be implemented here
+    alert(`${format.toUpperCase()} formatida eksport qilish hozircha ishlab chiqilmoqda`);
+}
+</script>
+{% endblock %}

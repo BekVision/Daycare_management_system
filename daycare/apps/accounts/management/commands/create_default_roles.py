@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from accounts.models import Role
-from accounts.permissions import PERMISSIONS
+from apps.accounts.models import Role
+from apps.accounts.permissions import PERMISSIONS
 
 
 class Command(BaseCommand):

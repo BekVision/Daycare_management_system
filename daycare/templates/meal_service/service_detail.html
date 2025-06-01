@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% load mathfilters %}
+
+{% block title %}{{ service.meal.name }} - Ovqat Xizmati - Bog'cha Ombor Tizimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">{{ service.meal.name }}</h2>
+        <p class="text-muted mb-0">
+            <i class="bi bi-calendar3 me-1"></i>{{ service.service_date|date:"d F Y, l" }}
+            <span class="mx-2">•</span>
+            <i class="bi bi-clock me-1"></i>{{ service.service_time|time:"H:i" }}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'meal_service:service_list' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left me-1"></i>Orqaga
+        </a>
+        {% if user.is_admin or service.created_by == user %}
+        <a href="{% url 'meal_service:service_update' service.pk %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-pencil me-1"></i>Tahrirlash
+        </a>
+        {% endif %}
+        {% if service.status != 'SERVED' and service.status != 'CANCELLED' %}
+            {% if user.is_chef or user.is_admin %}
+            <button type="button" class="btn btn-success" onclick="serveMeal({{ service.pk }})">
+                <i class="bi bi-check-circle me-1"></i>Ovqat berish
+            </button>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Asosiy ma'lumotlar -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Asosiy ma'lumotlar
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Ovqat nomi</label>
+                        <div class="fw-bold">{{ service.meal.name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Kategoriya</label>
+                        <div>{{ service.meal.category.name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Ovqat turi</label>
+                        <div>
+                            <span class="badge bg-light text-dark">
+                                {{ service.get_meal_type_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Holat</label>
+                        <div>
+                            {% if service.status == 'PLANNED' %}
+                                <span class="badge bg-secondary">{{ service.get_status_display }}</span>
+                            {% elif service.status == 'PREPARING' %}
+                                <span class="badge bg-warning">{{ service.get_status_display }}</span>
+                            {% elif service.status == 'READY' %}
+                                <span class="badge bg-info">{{ service.get_status_display }}</span>
+                            {% elif service.status == 'SERVED' %}
+                                <span class="badge bg-success">{{ service.get_status_display }}</span>
+                            {% elif service.status == 'CANCELLED' %}
+                                <span class="badge bg-danger">{{ service.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Porsiyalar</label>
+                        <div class="d-flex align-items-center">
+                            <div class="fw-bold me-3">{{ service.portions_served }}/{{ service.portions_planned }}</div>
+                            {% if service.portions_planned > 0 %}
+                            <div class="progress flex-grow-1" style="height: 8px;">
+                                <div class="progress-bar bg-success" 
+                                     style="width: {{ service.efficiency_percentage }}%"></div>
+                            </div>
+                            <small class="text-muted ms-2">
+                                {{ service.efficiency_percentage }}%
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Umumiy xarajat</label>
+                        <div class="fw-bold text-primary">
+                            {% if service.total_cost %}
+                                {{ service.total_cost|floatformat:2 }} so'm
+                            {% else %}
+                                <span class="text-muted">Hisoblanmagan</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if service.waste_quantity > 0 %}
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Chiqindi miqdori</label>
+                        <div class="text-warning">{{ service.waste_quantity }} kg</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Yaratuvchi</label>
+                        <div>{{ service.created_by.get_full_name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Beruvchi</label>
+                        <div>{{ service.served_by.get_full_name }}</div>
+                        {% if service.served_at %}
+                        <small class="text-muted">{{ service.served_at|date:"d.m.Y H:i" }}</small>
+                        {% endif %}
+                    </div>
+                    {% if service.notes %}
+                    <div class="col-12">
+                        <label class="form-label text-muted">Izohlar</label>
+                        <div class="text-muted">{{ service.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ishlatilgan ingredientlar -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check me-2"></i>Ishlatilgan ingredientlar
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Rejalashtirilgan</th>
+                                <th>Ishlatilgan</th>
+                                <th>Zaxira (oldin/keyin)</th>
+                                <th>Narx</th>
+                                <th>Chiqindi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ log.ingredient.name }}</div>
+                                    <small class="text-muted">{{ log.ingredient.category.name }}</small>
+                                </td>
+                                <td>{{ log.quantity_planned }} {{ log.ingredient.unit }}</td>
+                                <td>
+                                    <span class="fw-bold">{{ log.quantity_used }} {{ log.ingredient.unit }}</span>
+                                    {% if log.quantity_used != log.quantity_planned %}
+                                    <small class="text-warning">
+                                        ({{ log.quantity_used|sub:log.quantity_planned|floatformat:2 }})
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ log.stock_before }} → {{ log.stock_after }} {{ log.ingredient.unit }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if log.total_cost %}
+                                        {{ log.total_cost|floatformat:2 }} so'm
+                                        {% if log.unit_cost %}
+                                        <small class="text-muted d-block">
+                                            {{ log.unit_cost|floatformat:2 }}/{{ log.ingredient.unit }}
+                                        </small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.waste_quantity > 0 %}
+                                        <span class="text-warning">{{ log.waste_quantity }} {{ log.ingredient.unit }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4">Umumiy xarajat:</th>
+                                <th>{{ total_ingredient_cost|floatformat:2 }} so'm</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-list-check" style="font-size: 2rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2">Hozircha ingredient loglari yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Baholarlar -->
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-star me-2"></i>Baholarlar ({{ feedbacks.count }})
+                    </h5>
+                    {% if service.status == 'SERVED' %}
+                    <a href="{% url 'meal_service:add_feedback' service.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Baholash qo'shish
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if feedbacks %}
+                    {% for feedback in feedbacks %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-bold">{{ feedback.feedback_by.get_full_name }}</div>
+                                <div class="mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= feedback.overall_rating %}
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span class="ms-2">{{ feedback.overall_rating }}/5</span>
+                                </div>
+                                {% if feedback.comments %}
+                                <p class="text-muted mb-1">{{ feedback.comments }}</p>
+                                {% endif %}
+                                <div class="row g-2 mt-2">
+                                    <div class="col-auto">
+                                        <small class="text-muted">Ta'm: {{ feedback.taste_rating }}/5</small>
+                                    </div>
+                                    <div class="col-auto">
+                                        <small class="text-muted">Porsiya: {{ feedback.portion_rating }}/5</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ feedback.created_at|date:"d.m.Y H:i" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-star" style="font-size: 2rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2">Hozircha baholar yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Yon panel -->
+    <div class="col-md-4">
+        <!-- Retsept ma'lumotlari -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="bi bi-book me-2"></i>Retsept ma'lumotlari
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recipe_items %}
+                <div class="list-group list-group-flush">
+                    {% for recipe in recipe_items %}
+                    <div class="list-group-item border-0 px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">{{ recipe.ingredient.name }}</div>
+                                <small class="text-muted">
+                                    {{ recipe.quantity_per_portion }} {{ recipe.ingredient.unit }}/porsiya
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">
+                                    {{ recipe.total_quantity_needed }} {{ recipe.ingredient.unit }}
+                                </div>
+                                {% if recipe.is_optional %}
+                                <span class="badge bg-light text-dark">Ixtiyoriy</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-book" style="font-size: 1.5rem; color: #dee2e6;"></i>
+                    <p class="text-muted small mt-2">Retsept ma'lumotlari yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statistika -->
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Statistika
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="fw-bold text-primary" style="font-size: 1.5rem;">
+                                {{ service.efficiency_percentage }}%
+                            </div>
+                            <small class="text-muted">Samaradorlik</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="fw-bold text-success" style="font-size: 1.5rem;">
+                                {{ service.cost_per_portion }}
+                            </div>
+                            <small class="text-muted">So'm/porsiya</small>
+                        </div>
+                    </div>
+                    {% if service.waste_quantity > 0 %}
+                    <div class="col-12">
+                        <div class="text-center">
+                            <div class="fw-bold text-warning" style="font-size: 1.2rem;">
+                                {{ service.waste_quantity }} kg
+                            </div>
+                            <small class="text-muted">Chiqindi</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ovqat berish modal -->
+<div class="modal fade" id="serveMealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ovqat berish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ service.meal.name }} ovqatini {{ service.portions_planned }} porsiya miqdorida bermoqchimisiz?</p>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Bu amal ingredientlarni ombordan ayiradi va qaytarib bo'lmaydi.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <button type="button" class="btn btn-success" id="confirmServeBtn">
+                    <i class="bi bi-check-circle me-1"></i>Ovqat berish
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function serveMeal(serviceId) {
+    const modal = new bootstrap.Modal(document.getElementById('serveMealModal'));
+    modal.show();
+    
+    document.getElementById('confirmServeBtn').onclick = function() {
+        // CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/meal_service/${serviceId}/serve/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Xato: ' + data.error);
+                if (data.insufficient_ingredients) {
+                    console.log('Yetarli bo\'lmagan ingredientlar:', data.insufficient_ingredients);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xato yuz berdi!');
+        });
+        
+        modal.hide();
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block title %}Bildirishnomalar{% endblock %}
+
+{% block page_title %}Bildirishnomalar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Bildirishnomalar</h4>
+        <p class="text-muted mb-0">
+            Jami {{ total_notifications }} ta bildirishnoma
+            {% if unread_count > 0 %}
+            ({{ unread_count }} ta o'qilmagan)
+            {% endif %}
+        </p>
+    </div>
+    <div class="btn-group">
+        {% if unread_count > 0 %}
+        <button type="button" class="btn btn-outline-primary" onclick="markAllAsRead()">
+            <i class="bi bi-check-all me-1"></i>Barchasini o'qilgan deb belgilash
+        </button>
+        {% endif %}
+        <a href="{% url 'notifications:preferences' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-gear me-1"></i>Sozlamalar
+        </a>
+    </div>
+</div>
+
+<!-- Search and filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Qidiruv</label>
+                <input type="search" name="search" value="{{ search }}"
+                       class="form-control" placeholder="Sarlavha yoki matn...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Turi</label>
+                <select name="type" class="form-select">
+                    <option value="">Barchasi</option>
+                    {% for value, label in type_choices %}
+                    <option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Muhimlik</label>
+                <select name="priority" class="form-select">
+                    <option value="">Barchasi</option>
+                    {% for value, label in priority_choices %}
+                    <option value="{{ value }}" {% if priority_filter == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Holat</label>
+                <select name="read" class="form-select">
+                    <option value="">Barchasi</option>
+                    <option value="0" {% if read_filter == "0" %}selected{% endif %}>O'qilmagan</option>
+                    <option value="1" {% if read_filter == "1" %}selected{% endif %}>O'qilgan</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Qidirish
+                    </button>
+                    {% if search or type_filter or priority_filter or read_filter %}
+                    <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i>Tozalash
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Notifications list -->
+{% if page_obj %}
+<div class="row">
+    {% for notification in page_obj %}
+    <div class="col-12 mb-3">
+        <div class="card notification-item {% if not notification.is_read %}border-primary{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-start">
+                    <div class="me-3">
+                        {% if notification.priority == 'URGENT' %}
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+                        {% elif notification.priority == 'HIGH' %}
+                        <i class="bi bi-exclamation-circle-fill text-warning fs-4"></i>
+                        {% elif notification.type == 'LOW_STOCK' %}
+                        <i class="bi bi-box-seam text-warning fs-4"></i>
+                        {% elif notification.type == 'MEAL_READY' %}
+                        <i class="bi bi-cup-hot text-success fs-4"></i>
+                        {% elif notification.type == 'EXPIRY_WARNING' %}
+                        <i class="bi bi-clock-history text-info fs-4"></i>
+                        {% else %}
+                        <i class="bi bi-bell text-primary fs-4"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0 {% if not notification.is_read %}fw-bold{% endif %}">
+                                {% if notification.action_url %}
+                                <a href="{{ notification.action_url }}" class="text-decoration-none">
+                                    {{ notification.title }}
+                                </a>
+                                {% else %}
+                                <a href="{% url 'notifications:notification_detail' notification.pk %}" class="text-decoration-none">
+                                    {{ notification.title }}
+                                </a>
+                                {% endif %}
+                                {% if not notification.is_read %}
+                                <span class="badge bg-primary ms-2">Yangi</span>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">{{ notification.created_at|date:"d.m.Y H:i" }}</small>
+                        </div>
+                        
+                        <p class="text-muted mb-2">{{ notification.message|truncatewords:20 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-light text-dark me-2">{{ notification.get_type_display }}</span>
+                                {% if notification.priority != 'MEDIUM' %}
+                                <span class="badge 
+                                    {% if notification.priority == 'URGENT' %}bg-danger
+                                    {% elif notification.priority == 'HIGH' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ notification.get_priority_display }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="btn-group btn-group-sm">
+                                {% if not notification.is_read %}
+                                <button type="button" class="btn btn-outline-success" 
+                                        onclick="markAsRead({{ notification.pk }})" title="O'qilgan deb belgilash">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        onclick="markAsUnread({{ notification.pk }})" title="O'qilmagan deb belgilash">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                {% endif %}
+                                <a href="{% url 'notifications:notification_detail' notification.pk %}" 
+                                   class="btn btn-outline-primary" title="Ko'rish">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" 
+                                        onclick="deleteNotification({{ notification.pk }})" title="O'chirish">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-bell-slash" style="font-size: 3rem; color: #dee2e6;"></i>
+    <h5 class="mt-3 text-muted">Bildirishnoma topilmadi</h5>
+    {% if search or type_filter or priority_filter or read_filter %}
+    <p class="text-muted">Filtrlangan qidiruv natijasi yo'q</p>
+    <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-primary">
+        Barcha bildirishnomalar
+    </a>
+    {% else %}
+    <p class="text-muted">Hozircha bildirishnoma yo'q</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Bildirishnomalar sahifalash" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if read_filter %}&read={{ read_filter }}{% endif %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if read_filter %}&read={{ read_filter }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if read_filter %}&read={{ read_filter }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsRead(notificationId) {
+    fetch(`/notifications/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Xatolik yuz berdi');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Xatolik yuz berdi');
+    });
+}
+
+function markAsUnread(notificationId) {
+    fetch(`/notifications/${notificationId}/mark-unread/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Xatolik yuz berdi');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Xatolik yuz berdi');
+    });
+}
+
+function markAllAsRead() {
+    if (confirm('Barcha bildirishnomalarni o\'qilgan deb belgilashni xohlaysizmi?')) {
+        fetch('/notifications/mark-all-read/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+
+function deleteNotification(notificationId) {
+    if (confirm('Bu bildirishnomani o\'chirishni xohlaysizmi?')) {
+        fetch(`/notifications/${notificationId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Xatolik yuz berdi');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Xatolik yuz berdi');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-arrow-repeat me-2"></i>{{ title }}
+                    </h5>
+                    <a href="{% url 'inventory:stock_detail' ingredient.id %}" 
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Current Stock Info -->
+                <div class="alert alert-info">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="alert-heading mb-1">
+                                <i class="bi bi-info-circle me-1"></i>{{ ingredient.name }}
+                            </h6>
+                            <small class="text-muted">
+                                Kategoriya: {{ ingredient.category.name }} | 
+                                Birlik: {{ ingredient.unit }} |
+                                Minimal chegara: {{ ingredient.min_threshold }} {{ ingredient.unit }}
+                            </small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <h4 class="mb-0 {% if stock.current_quantity <= ingredient.min_threshold %}text-danger{% elif stock.current_quantity <= ingredient.min_threshold|add:ingredient.min_threshold %}text-warning{% else %}text-success{% endif %}">
+                                {{ stock.current_quantity }} {{ ingredient.unit }}
+                            </h4>
+                            <small class="text-muted">Joriy zaxira</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="post" id="stockUpdateForm">
+                    {% csrf_token %}
+                    
+                    <div class="row g-4">
+                        <!-- New Quantity -->
+                        <div class="col-md-6">
+                            <label for="{{ form.current_quantity.id_for_label }}" class="form-label">
+                                <i class="bi bi-box-seam me-1"></i>Yangi miqdor <span class="text-danger">*</span>
+                            </label>
+                            {{ form.current_quantity }}
+                            {% if form.current_quantity.errors %}
+                                <div class="text-danger small mt-1">{{ form.current_quantity.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Joriy zaxira: <strong>{{ stock.current_quantity }} {{ ingredient.unit }}</strong>
+                            </div>
+                        </div>
+                        
+                        <!-- Last Restock Date -->
+                        {% if form.last_restock_date %}
+                        <div class="col-md-6">
+                            <label for="{{ form.last_restock_date.id_for_label }}" class="form-label">
+                                <i class="bi bi-calendar-event me-1"></i>To'ldirilgan vaqt
+                            </label>
+                            {{ form.last_restock_date }}
+                            {% if form.last_restock_date.errors %}
+                                <div class="text-danger small mt-1">{{ form.last_restock_date.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Oxirgi to'ldirilgan vaqt (ixtiyoriy)
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Change Information -->
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="bi bi-calculator me-1"></i>O'zgarish ma'lumotlari
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Joriy miqdor:</small>
+                                            <div><strong id="currentAmount">{{ stock.current_quantity }} {{ ingredient.unit }}</strong></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Yangi miqdor:</small>
+                                            <div><strong id="newAmount">{{ stock.current_quantity }} {{ ingredient.unit }}</strong></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">O'zgarish:</small>
+                                            <div><strong id="changeAmount" class="text-muted">0 {{ ingredient.unit }}</strong></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Value Information -->
+                                    {% if ingredient.cost_per_unit %}
+                                    <hr>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Joriy qiymat:</small>
+                                            {% widthratio stock.current_quantity 1 ingredient.cost_per_unit as current_value %}
+                                            <div><strong class="text-primary">{{ current_value|floatformat:0 }} so'm</strong></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Yangi qiymat:</small>
+                                            <div><strong id="newValue" class="text-primary">{{ current_value|floatformat:0 }} so'm</strong></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Qiymat o'zgarishi:</small>
+                                            <div><strong id="valueChange" class="text-muted">0 so'm</strong></div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Warning Messages -->
+                        <div class="col-12">
+                            <div id="warningAlert" class="alert alert-warning d-none">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <span id="warningMessage"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'inventory:stock_detail' ingredient.id %}" 
+                                   class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle me-1"></i>Yangilash
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Information -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-question-circle me-2"></i>Yordam ma'lumotlari
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="small fw-bold">Stock yangilash:</h6>
+                        <ul class="list-unstyled small text-muted mb-3">
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Faqat ijobiy sonlar kiriting</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Yangi miqdor avtomatik hisoblanadi</li>
+                            <li><i class="bi bi-check-circle text-success me-1"></i>Barcha o'zgarishlar loglarda saqlanadi</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="small fw-bold">Ogohlantirish:</h6>
+                        <ul class="list-unstyled small text-muted">
+                            <li><i class="bi bi-exclamation-triangle text-warning me-1"></i>Kam miqdor kiritsangiz ogohlantirish keladi</li>
+                            <li><i class="bi bi-exclamation-triangle text-warning me-1"></i>0 qiysangiz "tugagan" deb belgilanadi</li>
+                            <li><i class="bi bi-info-circle text-info me-1"></i>Tranzaksiya avtomatik yaratiladi</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('stockUpdateForm');
+    const quantityField = document.querySelector('[name="current_quantity"]');
+    const currentAmount = document.getElementById('currentAmount');
+    const newAmount = document.getElementById('newAmount');
+    const changeAmount = document.getElementById('changeAmount');
+    const warningAlert = document.getElementById('warningAlert');
+    const warningMessage = document.getElementById('warningMessage');
+    
+    const currentQuantity = {{ stock.current_quantity }};
+    const minThreshold = {{ ingredient.min_threshold }};
+    const unitPrice = {{ ingredient.cost_per_unit|default:0 }};
+    const unit = "{{ ingredient.unit }}";
+    
+    // Update calculations when quantity changes
+    quantityField.addEventListener('input', function() {
+        const newQuantity = parseFloat(this.value) || 0;
+        const change = newQuantity - currentQuantity;
+        
+        // Update display
+        newAmount.textContent = newQuantity + ' ' + unit;
+        
+        if (change > 0) {
+            changeAmount.textContent = '+' + change + ' ' + unit;
+            changeAmount.className = 'text-success';
+        } else if (change < 0) {
+            changeAmount.textContent = change + ' ' + unit;
+            changeAmount.className = 'text-danger';
+        } else {
+            changeAmount.textContent = '0 ' + unit;
+            changeAmount.className = 'text-muted';
+        }
+        
+        // Update value if price is available
+        if (unitPrice > 0) {
+            const newValue = newQuantity * unitPrice;
+            const valueChange = change * unitPrice;
+            
+            document.getElementById('newValue').textContent = Math.round(newValue).toLocaleString() + ' so\'m';
+            
+            const valueChangeElement = document.getElementById('valueChange');
+            if (valueChange > 0) {
+                valueChangeElement.textContent = '+' + Math.round(valueChange).toLocaleString() + ' so\'m';
+                valueChangeElement.className = 'text-success';
+            } else if (valueChange < 0) {
+                valueChangeElement.textContent = Math.round(valueChange).toLocaleString() + ' so\'m';
+                valueChangeElement.className = 'text-danger';
+            } else {
+                valueChangeElement.textContent = '0 so\'m';
+                valueChangeElement.className = 'text-muted';
+            }
+        }
+        
+        // Show warnings
+        warningAlert.classList.add('d-none');
+        if (newQuantity === 0) {
+            warningAlert.classList.remove('d-none');
+            warningAlert.className = 'alert alert-danger';
+            warningMessage.textContent = 'Diqqat! Zaxira 0 ga tenglashtirilmoqda. Bu ingredient "tugagan" deb belgilanadi.';
+        } else if (newQuantity <= minThreshold) {
+            warningAlert.classList.remove('d-none');
+            warningAlert.className = 'alert alert-warning';
+            warningMessage.textContent = 'Ogohlantirish! Yangi miqdor minimal chegaradan (' + minThreshold + ' ' + unit + ') past yoki teng.';
+        }
+        
+        // Validation
+        if (newQuantity < 0) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        }
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const newQuantity = parseFloat(quantityField.value) || 0;
+        
+        if (newQuantity < 0) {
+            e.preventDefault();
+            quantityField.classList.add('is-invalid');
+            quantityField.focus();
+            
+            // Show error
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            errorDiv.innerHTML = `
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Iltimos, ijobiy son kiriting.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            form.appendChild(errorDiv);
+            
+            return false;
+        }
+        
+        // Confirmation for significant changes
+        const change = Math.abs(newQuantity - currentQuantity);
+        const changePercentage = (change / currentQuantity) * 100;
+        
+        if (changePercentage > 50 && currentQuantity > 0) {
+            const confirmMessage = `Diqqat! Siz ${changePercentage.toFixed(1)}% o'zgarish kiritmoqdasiz. Davom etishni istaysizmi?`;
+            if (!confirm(confirmMessage)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            form.submit();
+        }
+        
+        if (e.key === 'Escape') {
+            window.location.href = "{% url 'inventory:stock_detail' ingredient.id %}";
+        }
+    });
+    
+    // Auto-save to localStorage
+    quantityField.addEventListener('input', function() {
+        localStorage.setItem('stock_update_{{ ingredient.id }}', this.value);
+    });
+    
+    // Load saved value
+    const savedValue = localStorage.getItem('stock_update_{{ ingredient.id }}');
+    if (savedValue && !quantityField.value) {
+        quantityField.value = savedValue;
+        quantityField.dispatchEvent(new Event('input'));
+    }
+    
+    // Clear saved value on successful submit
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('stock_update_{{ ingredient.id }}');
+    });
+});
+</script>
+
+<style>
+.alert {
+    border-radius: 8px;
+}
+
+.form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.is-valid {
+    border-color: #198754;
+}
+
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #198754, #20c997);
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(45deg, #157347, #1aa37a);
+    transform: translateY(-1px);
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.form-text {
+    font-size: 0.8rem;
+}
+
+#changeAmount, #valueChange {
+    font-weight: 600;
+}
+</style>
+{% endblock %}

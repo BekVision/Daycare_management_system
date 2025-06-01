@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Hisobotlar Dashboard{% endblock %}
+
+{% block page_title %}Hisobotlar Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Jami hisobotlar</h6>
+                        <h3 class="mb-0">{{ dashboard_data.total_reports }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-file-earmark-text fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">O'rtacha samaradorlik</h6>
+                        <h3 class="mb-0">{{ dashboard_data.avg_efficiency|floatformat:1 }}%</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-graph-up fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">O'rtacha chiqindi</h6>
+                        <h3 class="mb-0">{{ dashboard_data.avg_waste|floatformat:1 }}%</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-trash fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Jami xarajat</h6>
+                        <h3 class="mb-0">{{ dashboard_data.total_cost|floatformat:0 }} so'm</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-currency-dollar fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Tendentsiya grafigi</h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="updateChart(7)">7 kun</button>
+                    <button type="button" class="btn btn-primary" onclick="updateChart(30)">30 kun</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="updateChart(90)">90 kun</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tezkor amallar</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'reports:daily_report_generate' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Kunlik hisobot yaratish
+                    </a>
+                    <a href="{% url 'reports:monthly_report_generate' %}" class="btn btn-success">
+                        <i class="bi bi-calendar-month me-1"></i>Oylik hisobot yaratish
+                    </a>
+                    <a href="{% url 'reports:export_report' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i>Eksport qilish
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Indicators -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Ishlash ko'rsatkichlari</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Samaradorlik</small>
+                        <small>{{ dashboard_data.avg_efficiency|floatformat:1 }}%</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ dashboard_data.avg_efficiency }}%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Chiqindi darajasi</small>
+                        <small>{{ dashboard_data.avg_waste|floatformat:1 }}%</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-warning" style="width: {{ dashboard_data.avg_waste }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Reports -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">So'nggi kunlik hisobotlar</h5>
+                <a href="{% url 'reports:daily_reports_list' %}" class="btn btn-outline-primary btn-sm">
+                    Barchasini ko'rish
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_daily %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Sana</th>
+                                <th>Ovqat soni</th>
+                                <th>Porsiya soni</th>
+                                <th>Samaradorlik</th>
+                                <th>Chiqindi</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in recent_daily %}
+                            <tr>
+                                <td>{{ report.report_date|date:"d.m.Y" }}</td>
+                                <td>{{ report.total_meals_served }}</td>
+                                <td>{{ report.total_portions_served }}</td>
+                                <td>
+                                    {% if report.efficiency_percentage %}
+                                    <span class="badge
+                                        {% if report.efficiency_percentage >= 80 %}bg-success
+                                        {% elif report.efficiency_percentage >= 60 %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ report.efficiency_percentage|floatformat:1 }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.waste_percentage %}
+                                    <span class="badge
+                                        {% if report.waste_percentage < 5 %}bg-success
+                                        {% elif report.waste_percentage < 10 %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ report.waste_percentage|floatformat:1 }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'reports:daily_report_detail' report.pk %}"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-file-earmark-text text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2">Hozircha hisobot yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">So'nggi oylik hisobotlar</h5>
+                <a href="{% url 'reports:monthly_reports_list' %}" class="btn btn-outline-primary btn-sm">
+                    Barchasini ko'rish
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_monthly %}
+                {% for report in recent_monthly %}
+                <div class="d-flex justify-content-between align-items-center mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div>
+                        <div class="fw-bold">{{ report.report_month|date:"F Y" }}</div>
+                        <small class="text-muted">
+                            {{ report.total_meals_served }} ovqat, {{ report.total_portions_served }} porsiya
+                        </small>
+                    </div>
+                    <a href="{% url 'reports:monthly_report_detail' report.pk %}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-calendar-month text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2">Hozircha hisobot yo'q</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+let trendChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initTrendChart();
+});
+
+function initTrendChart() {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const trendData = {{ dashboard_data.trend_data|safe }};
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.dates,
+            datasets: [
+                {
+                    label: 'Samaradorlik (%)',
+                    data: trendData.efficiency,
+                    borderColor: 'rgb(25, 135, 84)',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    tension: 0.1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Chiqindi (%)',
+                    data: trendData.waste,
+                    borderColor: 'rgb(255, 193, 7)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Xarajat (so\'m)',
+                    data: trendData.costs,
+                    borderColor: 'rgb(13, 202, 240)',
+                    backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                    tension: 0.1,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    min: 0,
+                    max: 100
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+}
+
+function updateChart(days) {
+    // Update active button
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-primary');
+    });
+    event.target.classList.remove('btn-outline-primary');
+    event.target.classList.add('btn-primary');
+
+    // Fetch new data
+    fetch(`/reports/api/dashboard-analytics/?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update chart
+            trendChart.data.labels = data.trend_data.dates;
+            trendChart.data.datasets[0].data = data.trend_data.efficiency;
+            trendChart.data.datasets[1].data = data.trend_data.waste;
+            trendChart.data.datasets[2].data = data.trend_data.costs;
+            trendChart.update();
+
+            // Update stats cards
+            document.querySelector('.bg-primary h3').textContent = data.total_reports;
+            document.querySelector('.bg-success h3').textContent = data.avg_efficiency.toFixed(1) + '%';
+            document.querySelector('.bg-warning h3').textContent = data.avg_waste.toFixed(1) + '%';
+            document.querySelector('.bg-info h3').textContent = data.total_cost.toFixed(0) + ' so\'m';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+</script>
+{% endblock %}

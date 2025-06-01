@@ -1,156 +1,500 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="h3">{{ title }}</h1>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:transaction_list' %}">Tranzaksiyalar</a></li>
-                    <li class="breadcrumb-item active">{{ title }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <form method="post" id="transactionForm">
-                        {% csrf_token %}
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.ingredient.id_for_label }}" class="form-label">{{ form.ingredient.label }}</label>
-                                    {{ form.ingredient }}
-                                    {% if form.ingredient.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.ingredient.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.transaction_type.id_for_label }}" class="form-label">{{ form.transaction_type.label }}</label>
-                                    {{ form.transaction_type }}
-                                    {% if form.transaction_type.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.transaction_type.errors.0 }}</div>
-                                    {% endif %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>{{ title }}
+                    </h5>
+                    <a href="{% url 'inventory:transaction_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" id="transactionForm">
+                    {% csrf_token %}
+                    
+                    <!-- Transaction Info -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="bi bi-arrow-repeat me-1"></i>Tranzaksiya ma'lumotlari
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.ingredient.id_for_label }}" class="form-label">
+                                <i class="bi bi-box me-1"></i>Ingredient <span class="text-danger">*</span>
+                            </label>
+                            {{ form.ingredient }}
+                            {% if form.ingredient.errors %}
+                                <div class="text-danger small mt-1">{{ form.ingredient.errors.0 }}</div>
+                            {% endif %}
+                            
+                            <!-- Current Stock Display -->
+                            <div id="currentStockInfo" class="mt-2" style="display: none;">
+                                <div class="alert alert-info py-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <strong>Joriy zaxira:</strong> <span id="currentStockValue">-</span>
+                                    <br><small>Mavjud: <span id="availableStockValue">-</span></small>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="{{ form.quantity.id_for_label }}" class="form-label">{{ form.quantity.label }}</label>
-                                    {{ form.quantity }}
-                                    {% if form.quantity.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="{{ form.unit_cost.id_for_label }}" class="form-label">{{ form.unit_cost.label }}</label>
-                                    {{ form.unit_cost }}
-                                    {% if form.unit_cost.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.unit_cost.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="{{ form.total_cost.id_for_label }}" class="form-label">{{ form.total_cost.label }}</label>
-                                    {{ form.total_cost }}
-                                    {% if form.total_cost.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.total_cost.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.supplier.id_for_label }}" class="form-label">{{ form.supplier.label }}</label>
-                                    {{ form.supplier }}
-                                    {% if form.supplier.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.supplier.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.invoice_number.id_for_label }}" class="form-label">{{ form.invoice_number.label }}</label>
-                                    {{ form.invoice_number }}
-                                    {% if form.invoice_number.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.invoice_number.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.expiry_date.id_for_label }}" class="form-label">{{ form.expiry_date.label }}</label>
-                                    {{ form.expiry_date }}
-                                    {% if form.expiry_date.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.expiry_date.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
-                            {{ form.notes }}
-                            {% if form.notes.errors %}
-                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.transaction_type.id_for_label }}" class="form-label">
+                                <i class="bi bi-tag me-1"></i>Tranzaksiya turi <span class="text-danger">*</span>
+                            </label>
+                            {{ form.transaction_type }}
+                            {% if form.transaction_type.errors %}
+                                <div class="text-danger small mt-1">{{ form.transaction_type.errors.0 }}</div>
                             {% endif %}
                         </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'inventory:transaction_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Orqaga
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Saqlash
-                            </button>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                                <i class="bi bi-123 me-1"></i>Miqdor <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.quantity }}
+                                <span class="input-group-text" id="unitDisplay">birlik</span>
+                            </div>
+                            {% if form.quantity.errors %}
+                                <div class="text-danger small mt-1">{{ form.quantity.errors.0 }}</div>
+                            {% endif %}
                         </div>
-                    </form>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.unit_cost.id_for_label }}" class="form-label">
+                                <i class="bi bi-currency-dollar me-1"></i>Birlik narxi
+                            </label>
+                            <div class="input-group">
+                                {{ form.unit_cost }}
+                                <span class="input-group-text">so'm</span>
+                            </div>
+                            {% if form.unit_cost.errors %}
+                                <div class="text-danger small mt-1">{{ form.unit_cost.errors.0 }}</div>
+                            {% endif %}
+                            
+                            <!-- Total Cost Calculation -->
+                            <div id="totalCostDisplay" class="form-text" style="display: none;">
+                                Jami: <strong class="text-primary" id="totalCostValue">0 so'm</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Supplier Information -->
+                    <div class="row g-3 mb-4" id="supplierSection">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="bi bi-truck me-1"></i>Yetkazib beruvchi ma'lumotlari
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.supplier.id_for_label }}" class="form-label">
+                                <i class="bi bi-building me-1"></i>Supplier nomi
+                            </label>
+                            {{ form.supplier }}
+                            {% if form.supplier.errors %}
+                                <div class="text-danger small mt-1">{{ form.supplier.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.invoice_number.id_for_label }}" class="form-label">
+                                <i class="bi bi-receipt me-1"></i>Hisob-faktura raqami
+                            </label>
+                            {{ form.invoice_number }}
+                            {% if form.invoice_number.errors %}
+                                <div class="text-danger small mt-1">{{ form.invoice_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">
+                                <i class="bi bi-info-circle me-1"></i>Qo'shimcha ma'lumotlar
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                                <i class="bi bi-calendar-x me-1"></i>Yaroqlilik muddati
+                            </label>
+                            {{ form.expiry_date }}
+                            {% if form.expiry_date.errors %}
+                                <div class="text-danger small mt-1">{{ form.expiry_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <!-- Space for future fields or current stock status -->
+                            <div id="stockWarning" style="display: none;">
+                                <label class="form-label">Ogohlantirish</label>
+                                <div class="alert alert-warning py-2 mb-0">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <span id="stockWarningText"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                <i class="bi bi-chat-text me-1"></i>Izohlar
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Form Validation Errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'inventory:transaction_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                                </a>
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="bi bi-check-circle me-1"></i>Yaratish
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Templates -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightning me-2"></i>Tezkor shablonlar
+                </h6>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-success btn-sm w-100" onclick="setTransactionType('IN')">
+                            <i class="bi bi-plus-circle me-1"></i>Kirim
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="setTransactionType('OUT')">
+                            <i class="bi bi-dash-circle me-1"></i>Chiqim
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-warning btn-sm w-100" onclick="setTransactionType('WASTE')">
+                            <i class="bi bi-trash me-1"></i>Chiqindi
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-info btn-sm w-100" onclick="setTransactionType('ADJUSTMENT')">
+                            <i class="bi bi-tools me-1"></i>Tuzatish
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const quantityInput = document.getElementById('{{ form.quantity.id_for_label }}');
-    const unitCostInput = document.getElementById('{{ form.unit_cost.id_for_label }}');
-    const totalCostInput = document.getElementById('{{ form.total_cost.id_for_label }}');
-
-    function calculateTotal() {
-        const quantity = parseFloat(quantityInput.value) || 0;
-        const unitCost = parseFloat(unitCostInput.value) || 0;
-        const total = quantity * unitCost;
-
-        if (total > 0) {
-            totalCostInput.value = total.toFixed(2);
+    const form = document.getElementById('transactionForm');
+    const ingredientField = document.querySelector('[name="ingredient"]');
+    const transactionTypeField = document.querySelector('[name="transaction_type"]');
+    const quantityField = document.querySelector('[name="quantity"]');
+    const unitCostField = document.querySelector('[name="unit_cost"]');
+    const supplierSection = document.getElementById('supplierSection');
+    const currentStockInfo = document.getElementById('currentStockInfo');
+    const stockWarning = document.getElementById('stockWarning');
+    const unitDisplay = document.getElementById('unitDisplay');
+    const totalCostDisplay = document.getElementById('totalCostDisplay');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Ingredient selection change
+    ingredientField.addEventListener('change', function() {
+        const ingredientId = this.value;
+        if (ingredientId) {
+            // Fetch ingredient stock info
+            fetch(`/inventory/api/ingredients/${ingredientId}/stock/`)
+                .then(response => response.json())
+                .then(data => {
+                    updateStockInfo(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching stock info:', error);
+                });
+        } else {
+            currentStockInfo.style.display = 'none';
+            stockWarning.style.display = 'none';
+            unitDisplay.textContent = 'birlik';
+        }
+    });
+    
+    // Transaction type change
+    transactionTypeField.addEventListener('change', function() {
+        updateSupplierSection();
+        updateSubmitButton();
+        validateStock();
+    });
+    
+    // Quantity change
+    quantityField.addEventListener('input', function() {
+        validateStock();
+        calculateTotal();
+    });
+    
+    // Unit cost change
+    unitCostField.addEventListener('input', function() {
+        calculateTotal();
+    });
+    
+    function updateStockInfo(data) {
+        document.getElementById('currentStockValue').textContent = 
+            `${data.current_stock} ${data.unit}`;
+        document.getElementById('availableStockValue').textContent = 
+            `${data.current_stock - (data.reserved_quantity || 0)} ${data.unit}`;
+        
+        unitDisplay.textContent = data.unit;
+        currentStockInfo.style.display = 'block';
+        
+        // Store data for validation
+        ingredientField.stockData = data;
+        
+        validateStock();
+    }
+    
+    function validateStock() {
+        if (!ingredientField.stockData || !quantityField.value || !transactionTypeField.value) {
+            return;
+        }
+        
+        const quantity = parseFloat(quantityField.value);
+        const transactionType = transactionTypeField.value;
+        const availableStock = ingredientField.stockData.current_stock - (ingredientField.stockData.reserved_quantity || 0);
+        
+        stockWarning.style.display = 'none';
+        
+        if (transactionType === 'OUT' || transactionType === 'WASTE') {
+            if (quantity > availableStock) {
+                document.getElementById('stockWarningText').textContent = 
+                    `Yetarli zaxira yo'q! Mavjud: ${availableStock} ${ingredientField.stockData.unit}`;
+                stockWarning.style.display = 'block';
+                submitBtn.disabled = true;
+            } else if (quantity > availableStock * 0.8) {
+                document.getElementById('stockWarningText').textContent = 
+                    `Zaxira kam qoladi! Qoladi: ${(availableStock - quantity).toFixed(2)} ${ingredientField.stockData.unit}`;
+                stockWarning.style.display = 'block';
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = false;
+            }
+        } else {
+            submitBtn.disabled = false;
         }
     }
+    
+    function calculateTotal() {
+        const quantity = parseFloat(quantityField.value) || 0;
+        const unitCost = parseFloat(unitCostField.value) || 0;
+        const total = quantity * unitCost;
+        
+        if (total > 0) {
+            document.getElementById('totalCostValue').textContent = 
+                `${total.toLocaleString()} so'm`;
+            totalCostDisplay.style.display = 'block';
+        } else {
+            totalCostDisplay.style.display = 'none';
+        }
+    }
+    
+    function updateSupplierSection() {
+        const transactionType = transactionTypeField.value;
+        
+        if (transactionType === 'IN') {
+            supplierSection.style.display = 'block';
+        } else {
+            supplierSection.style.display = 'none';
+        }
+    }
+    
+    function updateSubmitButton() {
+        const transactionType = transactionTypeField.value;
+        let buttonText = 'Yaratish';
+        let buttonClass = 'btn-primary';
+        
+        switch(transactionType) {
+            case 'IN':
+                buttonText = 'Kirim qilish';
+                buttonClass = 'btn-success';
+                break;
+            case 'OUT':
+                buttonText = 'Chiqim qilish';
+                buttonClass = 'btn-danger';
+                break;
+            case 'WASTE':
+                buttonText = 'Chiqindi qilish';
+                buttonClass = 'btn-warning';
+                break;
+            case 'ADJUSTMENT':
+                buttonText = 'Tuzatish';
+                buttonClass = 'btn-info';
+                break;
+        }
+        
+        submitBtn.innerHTML = `<i class="bi bi-check-circle me-1"></i>${buttonText}`;
+        submitBtn.className = `btn ${buttonClass}`;
+    }
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Required fields validation
+        if (!ingredientField.value) {
+            ingredientField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!transactionTypeField.value) {
+            transactionTypeField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!quantityField.value || parseFloat(quantityField.value) <= 0) {
+            quantityField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        // Stock validation for OUT/WASTE transactions
+        if (ingredientField.stockData && (transactionTypeField.value === 'OUT' || transactionTypeField.value === 'WASTE')) {
+            const quantity = parseFloat(quantityField.value);
+            const availableStock = ingredientField.stockData.current_stock - (ingredientField.stockData.reserved_quantity || 0);
+            
+            if (quantity > availableStock) {
+                alert(`Yetarli zaxira yo'q! Mavjud: ${availableStock} ${ingredientField.stockData.unit}`);
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    // Initial setup
+    updateSupplierSection();
+    updateSubmitButton();
+    calculateTotal();
+    
+    // URL parameters handling
+    const urlParams = new URLSearchParams(window.location.search);
+    const ingredientParam = urlParams.get('ingredient');
+    const typeParam = urlParams.get('type');
+    
+    if (ingredientParam) {
+        ingredientField.value = ingredientParam;
+        ingredientField.dispatchEvent(new Event('change'));
+    }
+    
+    if (typeParam) {
+        transactionTypeField.value = typeParam;
+        transactionTypeField.dispatchEvent(new Event('change'));
+    }
+});
 
-    quantityInput.addEventListener('input', calculateTotal);
-    unitCostInput.addEventListener('input', calculateTotal);
+// Quick template functions
+function setTransactionType(type) {
+    const transactionTypeField = document.querySelector('[name="transaction_type"]');
+    transactionTypeField.value = type;
+    transactionTypeField.dispatchEvent(new Event('change'));
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl + S: Save
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('transactionForm').submit();
+    }
+    
+    // Quick type selection
+    if (!e.ctrlKey && !e.metaKey) {
+        const target = e.target;
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && target.tagName !== 'SELECT') {
+            switch(e.key) {
+                case '1':
+                    setTransactionType('IN');
+                    break;
+                case '2':
+                    setTransactionType('OUT');
+                    break;
+                case '3':
+                    setTransactionType('WASTE');
+                    break;
+                case '4':
+                    setTransactionType('ADJUSTMENT');
+                    break;
+            }
+        }
+    }
 });
 </script>
+
+<style>
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #5a67d8, #6b46c1);
+        transform: translateY(-1px);
+    }
+    
+    .border-bottom {
+        border-bottom: 2px solid #e9ecef !important;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ced4da;
+    }
+</style>
 {% endblock %}

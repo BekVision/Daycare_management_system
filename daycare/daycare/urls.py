@@ -18,7 +18,10 @@ urlpatterns = [
     path('accounts/', include('apps.accounts.urls')),
     path('common/', include('apps.common.urls')),
     path('inventory/', include('apps.inventory.urls')),
-
+    path('meal_service/', include('apps.meal_service.urls')),
+    path('meals/', include('apps.meals.urls')),
+    path('notifications/', include('apps.notifications.urls')),
+    path('reports/', include('apps.reports.urls')),
     # Admin
     path('admin/', admin.site.urls),
 

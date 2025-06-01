@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Bog'cha Ombor Tizimi{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ title }}</h5>
+                    <a href="{% url 'meal_service:service_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Orqaga
+                    </a>
+                </div>
+            </div>
+            
+            <form method="post" id="serviceForm">
+                <div class="card-body">
+                    {% csrf_token %}
+                    
+                    <!-- Xato xabarlari -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        <!-- Ovqat -->
+                        <div class="col-md-6">
+                            <label for="{{ form.meal.id_for_label }}" class="form-label">
+                                {{ form.meal.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.meal }}
+                            {% if form.meal.errors %}
+                                <div class="text-danger small mt-1">{{ form.meal.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Porsiyalar soni -->
+                        <div class="col-md-6">
+                            <label for="{{ form.portions_planned.id_for_label }}" class="form-label">
+                                {{ form.portions_planned.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.portions_planned }}
+                            {% if form.portions_planned.errors %}
+                                <div class="text-danger small mt-1">{{ form.portions_planned.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                <span id="possiblePortions" class="text-muted"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Sana -->
+                        <div class="col-md-6">
+                            <label for="{{ form.service_date.id_for_label }}" class="form-label">
+                                {{ form.service_date.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.service_date }}
+                            {% if form.service_date.errors %}
+                                <div class="text-danger small mt-1">{{ form.service_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Vaqt -->
+                        <div class="col-md-6">
+                            <label for="{{ form.service_time.id_for_label }}" class="form-label">
+                                {{ form.service_time.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.service_time }}
+                            {% if form.service_time.errors %}
+                                <div class="text-danger small mt-1">{{ form.service_time.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Ovqat turi -->
+                        <div class="col-md-6">
+                            <label for="{{ form.meal_type.id_for_label }}" class="form-label">
+                                {{ form.meal_type.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.meal_type }}
+                            {% if form.meal_type.errors %}
+                                <div class="text-danger small mt-1">{{ form.meal_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Qo'shimcha maydonlar (yangilash formasida) -->
+                        {% if form.portions_served %}
+                        <div class="col-md-6">
+                            <label for="{{ form.portions_served.id_for_label }}" class="form-label">
+                                {{ form.portions_served.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.portions_served }}
+                            {% if form.portions_served.errors %}
+                                <div class="text-danger small mt-1">{{ form.portions_served.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if form.status %}
+                        <div class="col-md-6">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                {{ form.status.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if form.waste_quantity %}
+                        <div class="col-md-6">
+                            <label for="{{ form.waste_quantity.id_for_label }}" class="form-label">
+                                {{ form.waste_quantity.label }}
+                            </label>
+                            {{ form.waste_quantity }}
+                            {% if form.waste_quantity.errors %}
+                                <div class="text-danger small mt-1">{{ form.waste_quantity.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Izohlar -->
+                        <div class="col-12">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                {{ form.notes.label }}
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Ingredientlar holati -->
+                    <div id="ingredientStatus" class="mt-4" style="display: none;">
+                        <h6>Ingredientlar holati:</h6>
+                        <div id="ingredientList"></div>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent border-0">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'meal_service:service_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Bekor qilish
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="bi bi-check-circle me-1"></i>Saqlash
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .ingredient-item {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+    }
+    .ingredient-sufficient {
+        background-color: #d1edff;
+        border: 1px solid #b6d7ff;
+    }
+    .ingredient-insufficient {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function checkIngredients() {
+    const mealSelect = document.getElementById('id_meal');
+    const portionsInput = document.getElementById('id_portions_planned');
+    const statusDiv = document.getElementById('ingredientStatus');
+    const listDiv = document.getElementById('ingredientList');
+    const possibleSpan = document.getElementById('possiblePortions');
+    
+    const mealId = mealSelect.value;
+    const portions = portionsInput.value || 1;
+    
+    if (!mealId) {
+        statusDiv.style.display = 'none';
+        possibleSpan.textContent = '';
+        return;
+    }
+    
+    // Mumkin bo'lgan porsiyalarni hisoblash
+    fetch(`/meal_service/calculate-portions/${mealId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const possiblePortions = data.possible_portions;
+            if (possiblePortions > 0) {
+                possibleSpan.innerHTML = `<i class="bi bi-info-circle me-1"></i>Maksimal: ${possiblePortions} porsiya`;
+                possibleSpan.className = 'text-info';
+            } else {
+                possibleSpan.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>Ingredientlar yetarli emas`;
+                possibleSpan.className = 'text-warning';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            possibleSpan.textContent = '';
+        });
+    
+    // Ingredientlar holatini tekshirish
+    fetch(`/meal_service/check-ingredients/${mealId}/?portions=${portions}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.ingredients && data.ingredients.length > 0) {
+                listDiv.innerHTML = '';
+                data.ingredients.forEach(ingredient => {
+                    const div = document.createElement('div');
+                    div.className = `ingredient-item ${ingredient.is_sufficient ? 'ingredient-sufficient' : 'ingredient-insufficient'}`;
+                    
+                    const icon = ingredient.is_sufficient ? 
+                        '<i class="bi bi-check-circle text-success me-2"></i>' : 
+                        '<i class="bi bi-exclamation-triangle text-danger me-2"></i>';
+                    
+                    div.innerHTML = `
+                        ${icon}
+                        <strong>${ingredient.name}</strong>: 
+                        ${ingredient.available} / ${ingredient.required} ${ingredient.unit}
+                        ${ingredient.is_optional ? '<span class="badge bg-secondary ms-2">Ixtiyoriy</span>' : ''}
+                    `;
+                    listDiv.appendChild(div);
+                });
+                statusDiv.style.display = 'block';
+                
+                // Submit tugmasini boshqarish
+                const submitBtn = document.getElementById('submitBtn');
+                if (!data.all_available) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Ingredientlar yetarli emas';
+                    submitBtn.className = 'btn btn-warning';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saqlash';
+                    submitBtn.className = 'btn btn-primary';
+                }
+            } else {
+                statusDiv.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            statusDiv.style.display = 'none';
+        });
+}
+
+// Event listeners
+document.getElementById('id_meal').addEventListener('change', checkIngredients);
+document.getElementById('id_portions_planned').addEventListener('input', checkIngredients);
+
+// Sahifa yuklanganda tekshirish
+document.addEventListener('DOMContentLoaded', function() {
+    checkIngredients();
+});
+</script>
+{% endblock %}

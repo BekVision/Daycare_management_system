@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.db import models
+
 
 class IngredientCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -33,6 +36,21 @@ class Ingredient(models.Model):
     def __str__(self):
         return f"{self.name} ({self.unit})"
 
+    def available_quantity(self):
+        """Mavjud miqdor (jami - rezerv qilingan)"""
+        try:
+            return self.stock.current_quantity - self.stock.reserved_quantity
+        except Stock.DoesNotExist:
+            return 0
+
+    def is_low_stock(self):
+        """Zaxira kam ekanligini tekshirish"""
+        return self.available_quantity() <= self.min_threshold
+
+    def is_out_of_stock(self):
+        """Zaxira tugaganligini tekshirish"""
+        return self.available_quantity() <= 0
+
     class Meta:
         verbose_name = "Ingredient"
         verbose_name_plural = "Ingredientlar"
@@ -50,6 +68,25 @@ class Stock(models.Model):
     def __str__(self):
         return f"{self.ingredient.name} zaxirasi: {self.current_quantity} {self.ingredient.unit}"
 
+    def available_quantity(self):
+        """Mavjud miqdor"""
+        return self.current_quantity - self.reserved_quantity
+
+    def is_expired(self):
+        """Muddati tugaganligini tekshirish"""
+        if not self.expiry_date:
+            return False
+        from datetime import date
+        return self.expiry_date < date.today()
+
+    def days_until_expiry(self):
+        """Muddati tugashiga qancha kun qolganligini hisoblash"""
+        if not self.expiry_date:
+            return None
+        from datetime import date
+        delta = self.expiry_date - date.today()
+        return delta.days
+
     def clean(self):
         from django.core.exceptions import ValidationError
         if self.current_quantity < 0:
@@ -62,6 +99,7 @@ class Stock(models.Model):
         verbose_name_plural = "Zaxiralar"
 
 
+# noinspection PyTypeChecker
 class StockTransaction(models.Model):
     TRANSACTION_TYPES = [
         ('IN', 'Kirim'),
@@ -88,6 +126,37 @@ class StockTransaction(models.Model):
     def __str__(self):
         return f"{self.get_transaction_type_display()} - {self.ingredient.name}: {self.quantity} {self.ingredient.unit}"
 
+    def save(self, *args, **kwargs):
+        if self.unit_cost and self.quantity:
+            self.total_cost = Decimal(str(self.unit_cost)) * Decimal(str(self.quantity))
+        super().save(*args, **kwargs)
+
+        # Stock ni yangilash
+        self.update_stock()
+
+    def update_stock(self):
+        """Tranzaksiya asosida stock ni yangilash"""
+        stock, created = Stock.objects.get_or_create(
+            ingredient=self.ingredient,
+            defaults={
+                'last_updated_by': self.created_by
+            }
+        )
+
+        if self.transaction_type == 'IN':
+            stock.current_quantity += self.quantity
+            if self.expiry_date:
+                stock.expiry_date = self.expiry_date
+            stock.last_restock_date = self.created_at.date()
+        elif self.transaction_type in ['OUT', 'WASTE']:
+            stock.current_quantity -= self.quantity
+        elif self.transaction_type == 'ADJUSTMENT':
+            # Adjustment absolute qiymat sifatida qabul qilinadi
+            stock.current_quantity = self.quantity
+
+        stock.last_updated_by = self.created_by
+        stock.save()
+
     def clean(self):
         from django.core.exceptions import ValidationError
         if self.quantity <= 0:
@@ -96,6 +165,7 @@ class StockTransaction(models.Model):
     class Meta:
         verbose_name = "Zaxira tranzaksiyasi"
         verbose_name_plural = "Zaxira tranzaksiyalari"
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['created_at'], name='idx_txn_created'),
             models.Index(fields=['ingredient', 'created_at'], name='idx_txn_ing_date'),

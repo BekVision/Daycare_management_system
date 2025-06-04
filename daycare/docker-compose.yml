@@ -1,55 +1,59 @@
-#version: '3.9'
-#
-#services:
-#  db:
-#    image: postgres:15
-#    container_name: daycare_db
-#    environment:
-#      POSTGRES_DB: daycare_db
-#      POSTGRES_USER: postgres
-#      POSTGRES_PASSWORD: your_password_here
-#    volumes:
-#      - postgres_data:/var/lib/postgresql/data
-#    ports:
-#      - "5433:5432"
-#    networks:
-#      - daycare_network
-#
-#  # Django web ilovasi
-#  web:
-#    build: .
-#    container_name: daycare_web
-#    environment:
-#      - DEBUG=False
-#      - DATABASE_URL=postgresql://postgres:your_password_here@db:5432/daycare_db
-#      - SECRET_KEY=your_secret_key_here
-#      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
-#    volumes:
-#      - ./staticfiles:/app/staticfiles
-#      - ./media:/app/media
-#    ports:
-#      - "8001:8000"
-#    depends_on:
-#      - db
-#    networks:
-#      - daycare_network
-#    command: >
-#      sh -c "python manage.py migrate &&
-#             python manage.py collectstatic --noinput &&
-#             gunicorn --bind 0.0.0.0:8000 daycare.wsgi:application"
-#
-#
-#  redis:
-#    image: redis:7-alpine
-#    container_name: daycare_redis
-#    ports:
-#      - "6379:6379"
-#    networks:
-#      - daycare_network
-#
-#volumes:
-#  postgres_data:
-#
-#networks:
-#  daycare_network:
-#    driver: bridge
+services:
+  db:
+    image: postgres:15
+    container_name: daycare_db
+    environment:
+      POSTGRES_DB: daycare_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - daycare_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    container_name: daycare_web
+    environment:
+      - DEBUG=${DEBUG}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+    volumes:
+      - ./staticfiles:/app/staticfiles
+      - ./media:/app/media
+      - .:/app
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - daycare_network
+    command: >
+      sh -c "sleep 10 && #  10 soniya kutadi
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 daycare.wsgi:application"
+
+  redis:
+    image: redis:7-alpine
+    container_name: daycare_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - daycare_network
+
+volumes:
+  postgres_data:
+
+networks:
+  daycare_network:
+    driver: bridge

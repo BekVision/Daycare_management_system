@@ -92,3 +92,22 @@ Texnik yordam uchun maxsus kanallar tashkil etilgan va muntazam yangilanishlar v
 ## Kelajak Rivojlanish Rejalari
 
 Tizimning kelajakdagi versiyalarida mobil ilova qo'llab-quvvatlash, kengaytirilgan analitika, AI asosidagi bashoratli tahlil va boshqa bog'chalar bilan integratsiya imkoniyatlari rejalashtirilgan. Foydalanuvchilardan kelgan fikr-mulohazalar asosida yangi funksiyalar qo'shilishi davom ettiriladi.
+
+### Run with docker
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py create_default_roles
+docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py collectstatic --noinput
+
+
+sudo lsof -i :6379
+sudo systemctl stop redis-server
+sudo systemctl disable redis-server
+
+
+docker compose down --volumes # Oldingi konteynerlarni o'chiradi
+docker system prune -a --volumes # Barcha keraksiz docker resurslarini tozalaydi
+
+
+docker compose build
+docker compose up -d
